@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0c1119">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%228%22%20fill%3D%22%23c2f378%22%2F%3E%3Cpath%20d%3D%22m16%207%209%205-9%205-9-5%209-5Zm-9%2010%209%205%209-5m-18%205%209%205%209-5%22%20fill%3D%22none%22%20stroke%3D%22%23162311%22%20stroke-width%3D%221.6%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E">
+  <title>PowerBI Doc — Model workspace</title><link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="i-model" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5Z M3 12l9 5 9-5 M3 16l9 5 9-5"/></symbol>
+    <symbol id="i-doc" viewBox="0 0 24 24"><path d="M14 3H5v18h14V8l-5-5Z M14 3v5h5 M8 12h8 M8 16h6"/></symbol>
+    <symbol id="i-code" viewBox="0 0 24 24"><path d="m7 7-5 5 5 5 M17 7l5 5-5 5 M14 4l-4 16"/></symbol>
+    <symbol id="i-graph" viewBox="0 0 24 24"><rect x="2" y="8" width="6" height="8" rx="1"/><rect x="16" y="2" width="6" height="6" rx="1"/><rect x="16" y="16" width="6" height="6" rx="1"/><path d="M8 12h4V5h4 M12 12v7h4"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V3 m-5 5 5-5 5 5 M4 15v6h16v-6"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h16 m-6-6 6 6-6 6"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V3H3v13h5"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12 m-5-5 5 5 5-5 M4 16v5h16v-5"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6 M12 7v1"/></symbol>
+  </svg>
+  <a class="skip-link" href="#workspace">Skip to workspace</a>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="PowerBI Doc home"><span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="#i-model"/></svg></span><span>PowerBI<span class="brand-light"> Doc</span></span></a>
+    <span class="top-divider"></span><span class="top-context">Model workspace</span>
+    <div class="top-actions"><span class="local-badge"><span class="status-dot"></span>Workspace processing</span><button id="help" class="button quiet" aria-expanded="false" aria-controls="format-guide"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg><span>Format guide</span></button></div>
+  </header>
+  <main>
+    <section class="page-heading">
+      <div><p class="eyebrow"><span class="tiny-square"></span>POWER BI DEVELOPER TOOLKIT</p><h1>Understand your model.<span class="title-dot">_</span></h1><p class="page-description">Turn model metadata into documentation, DAX measures, and actionable insights.</p></div>
+      <span class="version-tag">WORKSPACE <span>v0.1</span></span>
+    </section>
+    <section class="model-overview" aria-label="Model overview">
+      <div class="model-identity"><span class="overview-icon"><svg class="icon" aria-hidden="true"><use href="#i-model"/></svg></span><div><span class="metric-label">ACTIVE MODEL</span><h2 id="model-name">No model loaded</h2><span id="model-caption" class="model-caption">Import metadata to begin</span></div></div>
+      <div class="metric"><span class="metric-label">TABLES</span><strong id="table-count">—</strong><span id="column-count" class="metric-detail">— columns</span></div>
+      <div class="metric"><span class="metric-label">MEASURES</span><strong id="measure-count">—</strong><span class="metric-detail">DAX expressions</span></div>
+      <div class="metric"><span class="metric-label">RELATIONSHIPS</span><strong id="relationship-count">—</strong><span class="metric-detail">Model connections</span></div>
+    </section>
+    <details id="format-guide" class="format-guide"><summary>Metadata format <span>Normalized JSON · maximum 2 MB</span></summary><div class="guide-body"><p>Use <code>tables</code> with named <code>columns</code> and optional <code>measures</code>. Relationships reference table and column names. Load the example for a complete model. PBIX and raw BIM files need conversion to this format first.</p><pre>{ "name": "Retail", "tables": [{ "name": "Sales", "columns": [{ "name": "Amount", "dataType": "decimal" }], "measures": [{ "name": "Revenue", "expression": "SUM('Sales'[Amount])" }] }], "relationships": [] }</pre><p>Relationship fields: <code>fromTable</code>, <code>fromColumn</code>, <code>toTable</code>, <code>toColumn</code>, <code>cardinality</code>, <code>crossFilteringBehavior</code>.</p></div></details>
+    <section id="workspace" class="workspace" aria-label="Model tools">
+      <aside class="source-pane" aria-labelledby="source-title">
+        <div class="pane-heading"><h2 id="source-title"><svg class="icon" aria-hidden="true"><use href="#i-code"/></svg>Model source</h2><span class="mono-tag">JSON</span></div>
+        <div class="source-content">
+          <div id="dropzone" class="import-zone"><span class="upload-glyph"><svg class="icon" aria-hidden="true"><use href="#i-upload"/></svg></span><strong>Bring your model into focus</strong><p>Drop a JSON file here, or choose a file.</p><button id="import" class="button secondary">Import JSON<svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></button><input id="file" class="visually-hidden" tabindex="-1" type="file" accept=".json,application/json" aria-label="Import model JSON"><span class="import-limit">MAX 2 MB · NORMALIZED METADATA</span></div>
+          <div class="editor-label"><label for="model">Or edit your metadata</label><button id="sample" class="text-button">Load example <span aria-hidden="true">↗</span></button></div>
+          <div class="editor-shell"><div class="editor-toolbar"><span><span class="file-dot"></span>model.json</span><span class="editor-language">{ }</span></div><textarea id="model" spellcheck="false" autocapitalize="off" autocomplete="off" aria-describedby="source-status" aria-label="Model metadata JSON"></textarea><div class="editor-footer"><span>JSON · UTF-8</span><span id="char-count">0 chars</span></div></div>
+          <div id="source-status" class="source-status" role="status"></div>
+          <p class="privacy-note"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Processed in this workspace. No persistent storage.</p>
+        </div>
+      </aside>
+      <article class="tools-pane">
+        <nav class="tool-tabs" role="tablist" aria-label="Model tools"><button id="tab-docs" class="tab active" role="tab" aria-selected="true" aria-controls="docs" tabindex="0" data-panel="docs"><svg class="icon" aria-hidden="true"><use href="#i-doc"/></svg><span>Documentation</span></button><button id="tab-dax" class="tab" role="tab" aria-selected="false" aria-controls="dax" tabindex="-1" data-panel="dax"><svg class="icon" aria-hidden="true"><use href="#i-code"/></svg><span>DAX assistant</span></button><button id="tab-analysis" class="tab" role="tab" aria-selected="false" aria-controls="analysis" tabindex="-1" data-panel="analysis"><svg class="icon" aria-hidden="true"><use href="#i-graph"/></svg><span>Model analysis</span></button></nav>
+        <div id="error" class="error-banner" role="alert" hidden></div>
+        <section id="docs" class="panel" role="tabpanel" aria-labelledby="tab-docs" tabindex="0">
+          <div class="tool-intro"><span class="tool-kicker">01 / DOCUMENT</span><h2>Knowledge, ready to share.</h2><p>A clear reference for every table, column, measure, and relationship in your model.</p></div>
+          <div class="action-row"><button class="button primary" id="generate-docs"><svg class="icon" aria-hidden="true"><use href="#i-doc"/></svg><span>Generate documentation</span><svg class="icon action-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></button><span class="action-hint">Markdown export</span></div>
+          <div class="output-card"><div class="output-toolbar"><span><span class="output-dot"></span>DOCUMENTATION <span class="output-format">.md</span></span><div class="output-actions"><button id="copy-docs" class="button icon-button" disabled aria-label="Copy documentation" title="Copy documentation"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg></button><button id="download" class="button compact" disabled><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>Export</button></div></div><div id="docs-empty" class="empty-state"><span class="empty-glyph"><svg class="icon" aria-hidden="true"><use href="#i-doc"/></svg></span><h3>Your model, documented.</h3><p>Generate a reference from the model source.<br>Then copy or export it as Markdown.</p><span class="empty-chip">TABLES / MEASURES / RELATIONSHIPS</span></div><pre id="docs-output" hidden></pre></div>
+          <div class="tool-note"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg><p>Documentation reflects the metadata you provide. Add descriptions to make the reference more useful.</p></div>
+        </section>
+        <section id="dax" class="panel" role="tabpanel" aria-labelledby="tab-dax" tabindex="0" hidden>
+          <div class="tool-intro"><span class="tool-kicker">02 / CREATE</span><h2>A measure with a clear purpose.</h2><p>Choose a calculation and your model fields. Get a DAX starting point with an explanation.</p></div>
+          <div class="form"><label class="wide-field" for="template">Calculation template<select id="template"><option value="sum">Total — SUM</option><option value="count">Row count — COUNTROWS</option><option value="distinct">Distinct count — DISTINCTCOUNT</option><option value="ytd">Year-to-date — TOTALYTD</option></select></label><label for="table">Source table<select id="table"></select></label><label id="column-field" for="column">Column<select id="column"></select></label><label id="date-table-field" for="date-table" hidden>Date table<select id="date-table"></select></label><label id="date-column-field" for="date-column" hidden>Date column<select id="date-column"></select></label></div>
+          <div class="action-row"><button class="button primary" id="generate-dax"><svg class="icon" aria-hidden="true"><use href="#i-code"/></svg><span>Generate DAX</span><svg class="icon action-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></button><span class="action-hint">Template-based generation</span></div>
+          <div class="output-card"><div class="output-toolbar"><span><span class="output-dot"></span>MEASURE <span class="output-format">DAX</span></span><button id="copy-dax" class="button compact" disabled><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg>Copy</button></div><div id="dax-empty" class="empty-state"><span class="empty-glyph"><svg class="icon" aria-hidden="true"><use href="#i-code"/></svg></span><h3>From intent to expression.</h3><p>Select a template above to build your measure.</p><span class="empty-chip">FILTER CONTEXT, EXPLAINED</span></div><pre id="dax-output" hidden></pre></div>
+          <div id="explanation-card" class="explanation-card" hidden><span class="tool-kicker">HOW IT WORKS</span><p id="explanation"></p></div><div class="tool-note"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg><p>Formulas use deterministic templates and are not executed here. Validate them in Power BI before use.</p></div>
+        </section>
+        <section id="analysis" class="panel" role="tabpanel" aria-labelledby="tab-analysis" tabindex="0" hidden>
+          <div class="tool-intro"><span class="tool-kicker">03 / REVIEW</span><h2>Small signals. Better models.</h2><p>Find documentation gaps, disconnected tables, and relationship patterns that deserve a closer look.</p></div>
+          <div class="action-row"><button class="button primary" id="analyze"><svg class="icon" aria-hidden="true"><use href="#i-graph"/></svg><span>Analyze model</span><svg class="icon action-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></button><span class="action-hint">Metadata checks</span></div>
+          <div class="output-card"><div class="output-toolbar"><span><span class="output-dot"></span>MODEL REVIEW</span><span id="analysis-summary" class="review-summary">Awaiting analysis</span></div><div id="analysis-empty" class="empty-state"><span class="empty-glyph"><svg class="icon" aria-hidden="true"><use href="#i-graph"/></svg></span><h3>Make the next improvement.</h3><p>Run a review to see findings and recommendations.</p><span class="empty-chip">STRUCTURE / DOCUMENTATION / FILTERING</span></div><div id="findings" hidden></div></div>
+          <div class="tool-note"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg><p>This review uses metadata heuristics. It does not inspect data, execute queries, or measure performance.</p></div>
+        </section>
+        <div class="session-status"><span id="action-status" role="status" aria-live="polite">Ready when you are.</span><span><span class="status-dot"></span>WORKSPACE SESSION</span></div>
+      </article>
+    </section>
+    <footer><span><svg class="icon" aria-hidden="true"><use href="#i-model"/></svg>Built for a clearer model.</span><span>METADATA IN. UNDERSTANDING OUT.</span></footer>
+  </main>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
