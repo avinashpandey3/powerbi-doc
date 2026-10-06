@@ -23,7 +23,11 @@ export function documentModel(input) {
   const model = validateModel(input);
   const lines = [`# ${cell(model.name || 'Power BI model')}`, '', '## Tables'];
   for (const t of model.tables) {
-    lines.push('', `### ${cell(t.name)}`, '', cell(t.description || ''), '', '| Column | Type | Description |', '| --- | --- | --- |');
+    lines.push('', `### ${cell(t.name)}`, '', cell(t.description || ''));
+    if (t.dataTypeInferred && Number.isSafeInteger(t.sampledRowCount) && Number.isSafeInteger(t.rowCount)) {
+      lines.push('', `Column types inferred from ${t.sampledRowCount.toLocaleString('en-US')} of ${t.rowCount.toLocaleString('en-US')} data rows.${t.sampledRowCount < t.rowCount ? ' Later rows were not used for type inference; review mixed types.' : ''}`);
+    }
+    lines.push('', '| Column | Type | Description |', '| --- | --- | --- |');
     for (const c of t.columns || []) lines.push(`| ${cell(c.name)} | ${cell(c.dataType || 'Unspecified')} | ${cell(c.description)} |`);
     for (const m of t.measures || []) lines.push('', `#### Measure: ${cell(m.name)}`, '', cell(m.description), '', '```dax', String(m.expression || '').replaceAll('```', ''), '```');
   }

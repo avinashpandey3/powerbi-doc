@@ -206,7 +206,13 @@ async function importFiles(files) {
       if (!response.ok) throw new Error(`${file.name}: ${data.error || 'Import failed.'}`);
       if (revision !== importRevision) return;
       results.push(data.result.model);
-      notes.push(`${file.name} → ${data.result.model.tables.map(t => `${t.name}${t.rowCount === undefined ? '' : ` (${t.rowCount.toLocaleString()} rows)`}`).join(', ')}`);
+      notes.push(`${file.name} → ${data.result.model.tables.map(t => {
+        const details = [t.name];
+        if (t.rowCount !== undefined) details.push(`${t.rowCount.toLocaleString()} data rows counted`);
+        if (t.sampledRowCount !== undefined) details.push(`types inferred from ${t.sampledRowCount.toLocaleString()}${t.sampledRowCount < t.rowCount ? ' sampled' : ''} rows`);
+        if (t.headerRow !== undefined) details.push(`headers on row ${t.headerRow.toLocaleString()}`);
+        return details.join(' · ');
+      }).join('; ')}`);
       warnings.push(...data.result.warnings.map(warning => `${file.name}: ${warning}`));
     }
     const combined = combineModels(results, { existing, mode });

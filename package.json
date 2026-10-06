@@ -13,6 +13,8 @@
   "dependencies": {
     "csv-parse": "7.0.3",
     "exceljs": "4.4.0",
-    "fast-xml-parser": "5.11.2"
+    "fast-xml-parser": "5.11.2",
+    "saxes": "6.0.0",
+    "yauzl": "3.4.0"
   }
 }
