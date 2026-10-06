@@ -39,13 +39,13 @@ Choose **Replace model** to combine a batch into a new model, or **Add tables** 
 | Format | Imported model content |
 | --- | --- |
 | CSV, TSV, delimited TXT | One table per file; first row supplies column names. Comma, tab, semicolon, and pipe delimiters are supported. |
-| Excel XLSX | One table per nonempty worksheet; first populated row supplies headers. Cached formula results may inform types; formulas are never executed. |
+| Excel XLSX | One table per nonempty worksheet. Detects a complete text header within the first 100 nonempty rows and reports skipped titles; single-column tables are supported. Cached formula results may inform types; formulas are never executed. |
 | JSON | Normalized model metadata, a BIM-style `model` object, an array of records, or a `rows`/`data` record array. |
 | JSONL / NDJSON | One record object per nonempty line. |
 | XML | One root containing repeated flat record elements, such as `<rows><row><Amount>12.50</Amount></row></rows>`. No attributes, nested fields, or DTDs. |
 | Power BI BIM | Tables, columns, DAX measures, and relationships from exported Tabular metadata. |
 
-Tabular imports infer `string`, `int64`, `decimal`, `boolean`, and ISO `dateTime` columns. Leading-zero identifiers remain strings, mixed types fall back to strings, and empty columns default to strings. JSON nested fields are summarized as string columns with a warning. Review inferred types in the model JSON. Data rows are processed in the workspace and are not retained in the model or saved to disk.
+Tabular imports infer `string`, `int64`, `decimal`, `boolean`, and ISO `dateTime` columns. Leading-zero identifiers remain strings, mixed types fall back to strings, and empty columns default to strings. JSON nested fields are summarized as string columns with a warning. Review inferred types in the model JSON. Data rows are processed in the workspace and are not retained in the model or saved to disk. Excel worksheet XML is streamed, all nonempty data rows are counted, and column types use the first 5,000 data rows per sheet. The model records `rowCount`, `sampledRowCount`, `dataTypeInferred`, and the detected `headerRow`; import details warn when later rows are outside the inference sample. Review report headings and inferred types before using the generated DAX.
 
 Data files do not describe Power BI measures or relationships. Add these to the model JSON or import BIM/model metadata that contains them. The result is a documentation model, not a deployable Power BI semantic model or PBIX file.
 
@@ -57,9 +57,9 @@ MAX_UPLOAD_MB=25 npm start
 
 On Render, add `MAX_UPLOAD_MB=25` in the service's **Environment** settings and redeploy. The UI reads the active limit from `/api/limits`, so its label and validation match the server. Zero does not mean unlimited, and invalid settings fail startup with a clear error.
 
-The original 2 MB upload cap was a conservative setting for the free hosting tier, not a file-format restriction. Imports are parsed in memory, and compressed workbooks can expand far beyond their upload size. An unlimited upload would risk exhausting memory or restarting the service. Raising the upload limit does not remove separate parsing limits; very large datasets need streaming or background processing and suitable hosting resources.
+The original 2 MB upload cap was a conservative setting for the free hosting tier, not a file-format restriction. Uploaded bytes are buffered in memory, and compressed workbooks can expand far beyond their upload size. Worksheet XML is streamed without materializing a full Excel workbook or merged ranges. An unlimited upload would risk exhausting memory or restarting the service. Raising the upload limit does not remove separate processing limits; very large datasets still need suitable hosting resources.
 
-Other limits: 2 MB for editable/combined model JSON; 50,000 data rows per file/workbook; 512 columns per table; 128 tables per metadata file/workbook. Workbooks must be unencrypted, expand to at most 20 MB, and contain at most 250,000 cells. Headers must be nonempty and unique. Text files must be UTF-8.
+Other limits: 2 MB for editable/combined model JSON; 50,000 data rows per CSV/TSV/TXT/JSON/JSONL/XML file; 512 populated columns per table; 128 tables per metadata file/workbook. Excel workbooks must be unencrypted and expand to at most 200 MB. The shared-string cache is bounded to 1,000,000 strings and 64,000,000 decoded characters. Excel has no application cell-count cap or 50,000-row cap; merged areas and formatting do not allocate data cells. Headers must be nonempty and unique. Text files must be UTF-8.
 
 Legacy XLS, ODS, Parquet, PBIX, PBIP, TMDL, PDF, and image files are not supported. Convert spreadsheets to XLSX/CSV or export Power BI model metadata as BIM/JSON. New formats can be added through the adapters in `importers.js`.
 

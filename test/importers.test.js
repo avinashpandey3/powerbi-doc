@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import ExcelJS from 'exceljs';
-import { importFile, MAX_FILE_BYTES, MAX_ROWS, MAX_COLUMNS, MAX_CELLS } from '../importers.js';
+import { importFile, MAX_FILE_BYTES, MAX_ROWS, MAX_COLUMNS } from '../importers.js';
 
 const bytes = value => Buffer.from(value);
 const types = table => Object.fromEntries(table.columns.map(column => [column.name, column.dataType]));
@@ -156,45 +156,35 @@ test('XLSX imports nonempty worksheets and cached formula metadata without execu
   assert.equal(JSON.stringify(result.model).includes('Alice'), false);
 });
 
-test('XLSX rejects blank headers, excessive sparse rows, empty and corrupt workbooks', async () => {
+test('XLSX rejects incomplete headers and invalid workbooks, while ignoring distant formatting', async () => {
   const incomplete = new ExcelJS.Workbook(), sheet = incomplete.addWorksheet('Rows');
   sheet.addRow(['Id', null]); sheet.addRow([1, 2]);
-  await assert.rejects(importFile(await incomplete.xlsx.writeBuffer(), 'bad.xlsx'), /Headers must be nonempty/);
+  await assert.rejects(importFile(await incomplete.xlsx.writeBuffer(), 'bad.xlsx'), /complete text header|Headers must be nonempty/);
   const sparse = new ExcelJS.Workbook(), distant = sparse.addWorksheet('Rows');
   distant.getCell('A1').value = 'Id'; distant.getCell(`A${MAX_ROWS + 2}`).value = 1;
-  await assert.rejects(importFile(await sparse.xlsx.writeBuffer(), 'sparse.xlsx'), /row indexes|data rows/);
+  assert.equal((await importFile(await sparse.xlsx.writeBuffer(), 'sparse.xlsx')).model.tables[0].rowCount, 1);
   const wide = new ExcelJS.Workbook(), formatted = wide.addWorksheet('Rows');
   formatted.getCell('A1').value = 'Id'; formatted.getColumn(MAX_COLUMNS + 1).width = 12;
-  await assert.rejects(importFile(await wide.xlsx.writeBuffer(), 'wide.xlsx'), /512 columns/);
+  assert.equal((await importFile(await wide.xlsx.writeBuffer(), 'wide.xlsx')).model.tables[0].columns.length, 1);
+  formatted.getCell('SS2').value = 1;
+  await assert.rejects(importFile(await wide.xlsx.writeBuffer(), 'populated-wide.xlsx'), /512 populated columns/);
   const empty = new ExcelJS.Workbook(); empty.addWorksheet('Empty');
   await assert.rejects(importFile(await empty.xlsx.writeBuffer(), 'empty.xlsx'), /no nonempty worksheets/);
   await assert.rejects(importFile(bytes('not a workbook'), 'bad.xlsx'), /Invalid \.xlsx/);
 });
 
-test('compressed XLSX expansion is bounded before workbook parsing', async () => {
+test('streamed XLSX accepts shared-string content beyond the former expansion limit', async () => {
   const workbook = new ExcelJS.Workbook(), sheet = workbook.addWorksheet('Large');
   sheet.addRow(['Text']);
   const repeated = 'a'.repeat(4000);
   for (let index = 0; index < 5100; index++) sheet.addRow([`${index}:${repeated}`]);
   const zipped = await workbook.xlsx.writeBuffer();
   assert.ok(zipped.length < MAX_FILE_BYTES, 'compressed upload fits the ordinary file limit');
-  await assert.rejects(importFile(zipped, 'expanded.xlsx'), /20 MB processing limit/);
-});
-
-test('XLSX rejects merged ranges above cell or column limits before expansion', async () => {
-  const cells = new ExcelJS.Workbook(), cellSheet = cells.addWorksheet('Merged');
-  cellSheet.getCell('A1').value = 'Id';
-  // Provide a merged-cell model directly, without expanding the fixture's range.
-  const originalGetter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(cellSheet), 'model').get;
-  let endpoint = `SR${Math.ceil(MAX_CELLS / MAX_COLUMNS) + 1}`;
-  Object.defineProperty(cellSheet, 'model', { get() {
-    const model = originalGetter.call(cellSheet);
-    model.rows[0].cells.push({ address: 'A2', type: ExcelJS.ValueType.Merge, master: endpoint });
-    return model;
-  } });
-  await assert.rejects(importFile(await cells.xlsx.writeBuffer(), 'merged-cells.xlsx'), /250,000 cells/);
-  endpoint = 'SS2';
-  await assert.rejects(importFile(await cells.xlsx.writeBuffer(), 'merged-columns.xlsx'), /512 columns/);
+  const result = await importFile(zipped, 'expanded.xlsx');
+  assert.equal(result.model.tables[0].rowCount, 5100);
+  assert.equal(result.model.tables[0].sampledRowCount, 5000);
+  assert.equal(result.model.tables[0].columns[0].dataType, 'string');
+  assert.ok(JSON.stringify(result.model).length < 1000);
 });
 
 test('byte, row, column, encoding, and unsupported-format limits fail clearly', async () => {

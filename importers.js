@@ -1,7 +1,6 @@
 import path from 'node:path';
-import { inflateRawSync } from 'node:zlib';
 import { parse as parseCsv } from 'csv-parse/sync';
-import ExcelJS from 'exceljs';
+import { readXlsx } from './xlsx-import.js';
 import { XMLParser, XMLValidator } from 'fast-xml-parser';
 import { validateModel } from './lib.js';
 import { getLimits } from './limits.js';
@@ -9,10 +8,7 @@ import { getLimits } from './limits.js';
 export const MAX_FILE_BYTES = getLimits().maxUploadBytes;
 export const MAX_ROWS = 50_000;
 export const MAX_COLUMNS = 512;
-export const MAX_CELLS = 250_000;
 const MAX_TABLES = 128;
-const MAX_EXPANDED_BYTES = 20_000_000;
-const MAX_ZIP_ENTRY_BYTES = MAX_EXPANDED_BYTES;
 const inferredWarnings = [
   'Column types are inferred from available values; review identifiers, dates, and mixed-type columns.',
   'Data files do not supply DAX measures or Power BI relationships. Add that metadata separately.',
@@ -188,9 +184,15 @@ function metadataModel(input, filename, format) {
       return result;
     });
     const result = { ...pick(table, ['name', 'description', 'isHidden']), columns: cleanedColumns, measures: cleanedMeasures };
-    if (Object.hasOwn(table, 'rowCount')) {
-      if (!Number.isSafeInteger(table.rowCount) || table.rowCount < 0) throw new Error('Table rowCount must be a nonnegative safe integer.');
-      result.rowCount = table.rowCount;
+    for (const key of ['rowCount', 'sampledRowCount', 'headerRow']) {
+      if (!Object.hasOwn(table, key)) continue;
+      if (!Number.isSafeInteger(table[key]) || table[key] < (key === 'headerRow' ? 1 : 0)) throw new Error(`Table ${key} must be a ${key === 'headerRow' ? 'positive' : 'nonnegative'} safe integer.`);
+      result[key] = table[key];
+    }
+    if (result.sampledRowCount !== undefined && (result.rowCount === undefined || result.sampledRowCount > result.rowCount)) throw new Error('Table sampledRowCount must not exceed rowCount.');
+    if (Object.hasOwn(table, 'dataTypeInferred')) {
+      if (typeof table.dataTypeInferred !== 'boolean') throw new Error('Table dataTypeInferred must be a boolean.');
+      result.dataTypeInferred = table.dataTypeInferred;
     }
     return result;
   });
@@ -264,141 +266,9 @@ function importXml(bytes, filename) {
   return inferredResult([tableFromRecords(rows, path.basename(filename, path.extname(filename)))], filename, 'xml');
 }
 
-// Check real ZIP expansion before handing a workbook to ExcelJS. A small upload
-// can otherwise inflate to a much larger workbook in memory.
-function preflightXlsx(bytes) {
-  let end = -1;
-  for (let offset = bytes.length - 22; offset >= Math.max(0, bytes.length - 65557); offset--) {
-    if (bytes.readUInt32LE(offset) === 0x06054b50 && offset + 22 + bytes.readUInt16LE(offset + 20) === bytes.length) { end = offset; break; }
-  }
-  if (end < 0) throw new Error('Invalid .xlsx workbook. Upload an unencrypted Excel .xlsx file.');
-  const entries = bytes.readUInt16LE(end + 10), centralSize = bytes.readUInt32LE(end + 12), centralOffset = bytes.readUInt32LE(end + 16);
-  if (bytes.readUInt16LE(end + 4) || bytes.readUInt16LE(end + 6) || entries !== bytes.readUInt16LE(end + 8) || entries === 0xffff || centralSize === 0xffffffff || centralOffset === 0xffffffff || entries > 2000 || centralOffset + centralSize !== end) {
-    throw new Error('Unsupported workbook archive. Use a standard, unencrypted .xlsx file.');
-  }
-  let cursor = centralOffset, totalExpanded = 0, totalCells = 0;
-  const names = new Set();
-  for (let index = 0; index < entries; index++) {
-    if (cursor + 46 > end || bytes.readUInt32LE(cursor) !== 0x02014b50) throw new Error('Invalid .xlsx workbook archive.');
-    const flags = bytes.readUInt16LE(cursor + 8), method = bytes.readUInt16LE(cursor + 10), compressed = bytes.readUInt32LE(cursor + 20), expanded = bytes.readUInt32LE(cursor + 24);
-    const nameLength = bytes.readUInt16LE(cursor + 28), extraLength = bytes.readUInt16LE(cursor + 30), commentLength = bytes.readUInt16LE(cursor + 32), localOffset = bytes.readUInt32LE(cursor + 42);
-    const next = cursor + 46 + nameLength + extraLength + commentLength;
-    if (next > end || flags & 1 || ![0, 8].includes(method) || localOffset + 30 > centralOffset || bytes.readUInt32LE(localOffset) !== 0x04034b50) throw new Error('Invalid or encrypted .xlsx workbook archive.');
-    const name = bytes.subarray(cursor + 46, cursor + 46 + nameLength).toString('utf8');
-    if (names.has(name)) throw new Error('Invalid .xlsx workbook archive with duplicate entries.');
-    names.add(name);
-    if (expanded > MAX_ZIP_ENTRY_BYTES || totalExpanded + expanded > MAX_EXPANDED_BYTES) throw new Error('The workbook expands beyond the 20 MB processing limit. Export fewer rows or sheets.');
-    const start = localOffset + 30 + bytes.readUInt16LE(localOffset + 26) + bytes.readUInt16LE(localOffset + 28);
-    if (start + compressed > centralOffset) throw new Error('Invalid .xlsx workbook archive.');
-    let contents;
-    try { contents = method === 0 ? bytes.subarray(start, start + compressed) : inflateRawSync(bytes.subarray(start, start + compressed), { maxOutputLength: Math.min(MAX_ZIP_ENTRY_BYTES, MAX_EXPANDED_BYTES - totalExpanded) }); }
-    catch { throw new Error('Invalid or oversized .xlsx workbook contents. Export fewer rows or sheets.'); }
-    if (contents.length !== expanded) throw new Error('Invalid .xlsx workbook archive sizes.');
-    totalExpanded += contents.length;
-    if (totalExpanded > MAX_EXPANDED_BYTES) throw new Error('The workbook expands beyond the 20 MB processing limit. Export fewer rows or sheets.');
-    // Reject sparse/out-of-range worksheet coordinates before ExcelJS can allocate rows.
-    if (/^xl\/worksheets\/[^/]+\.xml$/.test(name)) {
-      const xml = contents.toString('utf8');
-      let rowElements = 0;
-      for (const tag of xml.matchAll(/<(?:[A-Za-z_][\w.-]*:)?(row|col|c|mergeCell)\b[^>]*>/g)) {
-        const attributes = new Map();
-        for (const match of tag[0].matchAll(/\b(r|min|max|ref)\s*=\s*(["'])(.*?)\2/gs)) {
-          if (match[3].includes('&')) throw new Error('Entity-encoded worksheet coordinates are unsupported. Resave the workbook in Excel and try again.');
-          if (attributes.has(match[1])) throw new Error('Invalid duplicate worksheet coordinate attributes.');
-          attributes.set(match[1], match[3]);
-        }
-        if (tag[1] === 'row') {
-          if (++rowElements > MAX_ROWS + 1) throw new Error(`Worksheets can contain at most ${MAX_ROWS.toLocaleString('en-US')} data rows.`);
-          if (attributes.has('r') && (!/^\d+$/.test(attributes.get('r')) || Number(attributes.get('r')) > MAX_ROWS + 1)) throw new Error(`Worksheet row indexes must stay within ${MAX_ROWS + 1}. Remove distant formatted or populated rows.`);
-        } else if (tag[1] === 'col') {
-          for (const key of ['min', 'max']) if (attributes.has(key) && (!/^\d+$/.test(attributes.get(key)) || Number(attributes.get(key)) > MAX_COLUMNS)) throw new Error(`Worksheets can contain at most ${MAX_COLUMNS} columns. Remove distant formatted or populated columns.`);
-        } else if (tag[1] === 'c') {
-          totalCells++;
-          if (attributes.has('r')) boundedCellReference(attributes.get('r'));
-        } else if (tag[1] === 'mergeCell') {
-          const ends = (attributes.get('ref') || '').split(':');
-          if (ends.length !== 2) throw new Error('Invalid merged worksheet range.');
-          const start = boundedCellReference(ends[0]), finish = boundedCellReference(ends[1]);
-          if (finish.column < start.column || finish.row < start.row) throw new Error('Invalid merged worksheet range.');
-          totalCells += (finish.column - start.column + 1) * (finish.row - start.row + 1);
-        }
-        if (totalCells > MAX_CELLS) throw new Error(`A workbook can contain at most ${MAX_CELLS.toLocaleString('en-US')} cells, including merged ranges. Export fewer rows or sheets.`);
-      }
-    }
-    cursor = next;
-  }
-  if (cursor !== end || !names.has('xl/workbook.xml')) throw new Error('Invalid .xlsx workbook archive.');
-}
-
-function boundedCellReference(reference) {
-  const match = /^([A-Z]+)(\d+)$/.exec(reference);
-  if (!match) throw new Error('Invalid worksheet cell reference.');
-  let column = 0;
-  for (const letter of match[1]) column = column * 26 + letter.charCodeAt(0) - 64;
-  const row = Number(match[2]);
-  if (!row || column > MAX_COLUMNS || row > MAX_ROWS + 1) throw new Error(`Worksheets can contain at most ${MAX_COLUMNS} columns and ${MAX_ROWS.toLocaleString('en-US')} data rows.`);
-  return { column, row };
-}
-
-function excelValue(cell, state) {
-  if (!cell) return null;
-  let value = cell.value;
-  if (value && typeof value === 'object' && ('formula' in value || 'sharedFormula' in value)) {
-    state.formulas++;
-    if (value.result === undefined || value.result === null) { state.missingFormulaResults++; return null; }
-    value = value.result;
-  }
-  if (value && typeof value === 'object' && !(value instanceof Date)) {
-    if (Array.isArray(value.richText)) return value.richText.map(part => part.text).join('');
-    if ('text' in value) return value.text;
-    if ('error' in value) { state.errors++; return null; }
-    return String(value);
-  }
-  // A numeric Excel ID may use a display format such as 00000. Preserve it as text.
-  // The output contains types only, so a tiny representative ID avoids allocating
-  // potentially enormous strings for hostile/custom number formats.
-  if (typeof value === 'number' && Number.isSafeInteger(value) && /^0{2,}$/.test(cell.numFmt || '')) return '00';
-  return value;
-}
-
 async function importExcel(bytes, filename) {
-  preflightXlsx(bytes);
-  const workbook = new ExcelJS.Workbook();
-  try { await workbook.xlsx.load(bytes); }
-  catch { throw new Error('Unable to read this .xlsx workbook. Upload a valid, unencrypted Excel workbook.'); }
-  const tables = [], state = { formulas: 0, missingFormulaResults: 0, errors: 0 }, warnings = [], skippedSheets = [];
-  let totalRows = 0;
-  for (const worksheet of workbook.worksheets) {
-    if (!worksheet.actualRowCount) { skippedSheets.push(worksheet.name); continue; }
-    if (tables.length >= MAX_TABLES) throw new Error(`A workbook can contain at most ${MAX_TABLES} nonempty worksheets.`);
-    if (worksheet.columnCount > MAX_COLUMNS) throw new Error(`A worksheet can contain at most ${MAX_COLUMNS} columns. Remove distant formatted or populated columns.`);
-    if (worksheet.rowCount > MAX_ROWS + 1) throw new Error(`Worksheet row indexes must stay within ${MAX_ROWS + 1}. Remove distant formatted or populated rows.`);
-    let headerValues = null, width = 0, rowCount = 0;
-    const inferredTypes = Array(worksheet.columnCount).fill(null);
-    worksheet.eachRow({ includeEmpty: false }, row => {
-      const values = Array.from({ length: worksheet.columnCount }, (_, index) => excelValue(row.findCell(index + 1), state));
-      const last = values.findLastIndex(value => value !== null && value !== undefined && value !== '');
-      if (last < 0) return;
-      width = Math.max(width, last + 1);
-      if (!headerValues) { headerValues = values; return; }
-      rowCount++;
-      for (let index = 0; index <= last; index++) inferredTypes[index] = mergeType(inferredTypes[index], valueType(values[index]));
-    });
-    if (!headerValues) { skippedSheets.push(worksheet.name); continue; }
-    // Include trailing fields present only in data; blank headers must be corrected.
-    const headers = headersFor(headerValues.slice(0, width));
-    totalRows += rowCount;
-    if (totalRows > MAX_ROWS) throw new Error(`A workbook can contain at most ${MAX_ROWS.toLocaleString('en-US')} total data rows.`);
-    tables.push({ name: worksheet.name, rowCount, columns: headers.map((name, index) => ({ name, dataType: inferredTypes[index] || 'string' })), measures: [] });
-    if (worksheet.state && worksheet.state !== 'visible') warnings.push('Hidden worksheets are included in the imported model.');
-    if (worksheet.model.merges?.length) warnings.push('The workbook contains merged cells. Verify that each table has a single, complete header row.');
-  }
-  if (!tables.length) throw new Error('The workbook contains no nonempty worksheets. Add a header row and data before importing.');
-  if (skippedSheets.length) warnings.push(`${skippedSheets.length} empty worksheet(s) skipped: ${skippedSheets.join(', ')}.`);
-  if (state.formulas) warnings.push('Excel formulas are not executed. Type inference uses their saved results when available.');
-  if (state.missingFormulaResults) warnings.push(`${state.missingFormulaResults} formula cell(s) have no cached result and were treated as empty. Recalculate and save the workbook in Excel to include those values.`);
-  if (state.errors) warnings.push(`${state.errors} Excel error cell(s) were treated as empty. Fix workbook errors for complete type inference.`);
-  return inferredResult(tables, filename, 'xlsx', [...new Set(warnings)]);
+  const { tables, warnings } = await readXlsx(bytes, { headersFor, valueType, mergeType, maxColumns: MAX_COLUMNS, maxTables: MAX_TABLES });
+  return inferredResult(tables, filename, 'xlsx', warnings);
 }
 
 export async function importFile(buffer, filename) {
