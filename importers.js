@@ -4,8 +4,9 @@ import { parse as parseCsv } from 'csv-parse/sync';
 import ExcelJS from 'exceljs';
 import { XMLParser, XMLValidator } from 'fast-xml-parser';
 import { validateModel } from './lib.js';
+import { getLimits } from './limits.js';
 
-export const MAX_FILE_BYTES = 2_000_000;
+export const MAX_FILE_BYTES = getLimits().maxUploadBytes;
 export const MAX_ROWS = 50_000;
 export const MAX_COLUMNS = 512;
 export const MAX_CELLS = 250_000;
@@ -403,7 +404,7 @@ async function importExcel(bytes, filename) {
 export async function importFile(buffer, filename) {
   if (!(buffer instanceof Uint8Array)) throw new Error('File contents must be a byte buffer.');
   if (!buffer.length) throw new Error('The file is empty.');
-  if (buffer.length > MAX_FILE_BYTES) throw new Error('Files can be at most 2 MB. Export a smaller file and try again.');
+  if (buffer.length > MAX_FILE_BYTES) throw new Error(`Files can be at most ${MAX_FILE_BYTES / 1_000_000} MB. Export a smaller file and try again.`);
   if (typeof filename !== 'string' || !filename.trim()) throw new Error('A filename with a supported extension is required.');
   const extension = path.extname(filename).slice(1).toLowerCase(), bytes = Buffer.from(buffer.buffer, buffer.byteOffset, buffer.byteLength);
   if (['csv', 'tsv', 'txt'].includes(extension)) return importDelimited(bytes, filename, extension);

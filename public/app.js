@@ -13,9 +13,11 @@ const busy = new Set();
 let markdown = '', dax = '', modelRevision = 0, daxRevision = 0, importRevision = 0, validSource = false;
 let sourceCaption = 'Sample metadata · editable';
 let importController;
+let limits = { maxUploadBytes: 10_000_000, maxModelBytes: 2_000_000, maxFiles: 10 };
+let limitsLoaded = false;
 
 function model() {
-  if (new TextEncoder().encode($('model').value).length > 2_000_000) throw new Error('Metadata exceeds 2 MB. Use a smaller model export.');
+  if (new TextEncoder().encode($('model').value).length > limits.maxModelBytes) throw new Error(`Model metadata exceeds ${limits.maxModelBytes / 1_000_000} MB. Use a smaller model export.`);
   let data;
   try { data = JSON.parse($('model').value); } catch { throw new Error('Invalid JSON. Check commas, quotes, and brackets.'); }
   if (!data || !Array.isArray(data.tables) || !data.tables.length) throw new Error('Add a nonempty tables array. See the format guide.');
@@ -152,9 +154,26 @@ $('sample').onclick = () => { $('model').value = JSON.stringify(example, null, 2
 $('model').addEventListener('input', () => { sourceCaption = 'Edited metadata'; reset(); });
 $('import').onclick = () => $('file').click();
 function setImportBusy(value) {
-  $('import').disabled = value; $('import').setAttribute('aria-busy', String(value));
+  $('import').disabled = value || !limitsLoaded; $('import').setAttribute('aria-busy', String(value));
   $('import-label').textContent = value ? 'Importing…' : 'Import files';
   $('import-mode').disabled = value;
+}
+async function loadLimits() {
+  try {
+    const response = await fetch('/api/limits', { cache: 'no-store' });
+    if (!response.ok) throw new Error('Could not load upload settings.');
+    const data = await response.json();
+    if (!['maxUploadBytes', 'maxModelBytes', 'maxFiles'].every(key => Number.isSafeInteger(data[key]) && data[key] > 0)) throw new Error('Invalid upload settings.');
+    limits = data; limitsLoaded = true;
+    $('upload-limit-label').textContent = `${limits.maxUploadBytes / 1_000_000} MB PER FILE · UP TO ${limits.maxFiles} FILES`;
+    $('guide-file-limits').textContent = `Up to ${limits.maxFiles} files · maximum ${limits.maxUploadBytes / 1_000_000} MB per file`;
+    $('model-limit-label').textContent = `Generated model JSON is limited to ${limits.maxModelBytes / 1_000_000} MB.`;
+    sync();
+  } catch {
+    $('upload-limit-label').textContent = 'UPLOAD SETTINGS UNAVAILABLE · RELOAD TO RETRY';
+    $('guide-file-limits').textContent = 'Upload settings unavailable. Reload to retry.';
+    importFeedback('Could not load upload settings. Reload the page to retry.', true);
+  } finally { setImportBusy(Boolean(importController)); }
 }
 function importFeedback(message, failed = false) {
   $('import-feedback').textContent = message; $('import-feedback').hidden = false;
@@ -169,11 +188,14 @@ async function importFiles(files) {
   setImportBusy(true); showError('');
   $('import-details').hidden = true; $('import-details-list').replaceChildren();
   try {
-    if (files.length > 10) throw new Error('Choose up to 10 files per import.');
+    await limitsReady;
+    if (revision !== importRevision) return;
+    if (!limitsLoaded) throw new Error('Could not load upload settings. Reload the page to retry.');
+    if (files.length > limits.maxFiles) throw new Error(`Choose up to ${limits.maxFiles} files per import.`);
     const mode = $('import-mode').value;
     const existing = mode === 'append' ? model() : undefined;
     for (const file of files) {
-      if (file.size > 2_000_000) throw new Error(`${file.name}: file exceeds 2 MB.`);
+      if (file.size > limits.maxUploadBytes) throw new Error(`${file.name}: uploaded file exceeds ${limits.maxUploadBytes / 1_000_000} MB.`);
       if (!/\.(csv|tsv|txt|xlsx|json|jsonl|ndjson|xml|bim)$/i.test(file.name)) throw new Error(`${file.name}: unsupported format. Use CSV, TSV, delimited TXT, XLSX, JSON, JSONL, XML, or BIM.`);
     }
     const results = [], notes = [], warnings = [];
@@ -190,7 +212,7 @@ async function importFiles(files) {
     const combined = combineModels(results, { existing, mode });
     warnings.push(...combined.warnings);
     const text = JSON.stringify(combined.model, null, 2);
-    if (new TextEncoder().encode(text).length > 2_000_000) throw new Error('Combined model metadata exceeds 2 MB. Import fewer tables.');
+    if (new TextEncoder().encode(text).length > limits.maxModelBytes) throw new Error(`Combined model metadata exceeds ${limits.maxModelBytes / 1_000_000} MB. Import fewer tables.`);
     if (revision !== importRevision) return;
     $('model').value = text; sourceCaption = `Imported metadata · ${files.length} ${files.length === 1 ? 'file' : 'files'}`; reset();
     const added = results.reduce((n, result) => n + result.tables.length, 0);
@@ -259,3 +281,4 @@ $('download').onclick = () => {
 };
 $('export-model').onclick = () => { download(JSON.stringify(model(), null, 2), 'model.json', 'application/json'); status('Model JSON exported. Data rows are not included.'); };
 $('sample').click();
+const limitsReady = loadLimits();

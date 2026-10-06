@@ -198,7 +198,7 @@ test('XLSX rejects merged ranges above cell or column limits before expansion', 
 });
 
 test('byte, row, column, encoding, and unsupported-format limits fail clearly', async () => {
-  await assert.rejects(importFile(Buffer.alloc(MAX_FILE_BYTES + 1), 'large.csv'), /at most 2 MB/);
+  await assert.rejects(importFile(Buffer.alloc(MAX_FILE_BYTES + 1), 'large.csv'), new RegExp(`at most ${MAX_FILE_BYTES / 1_000_000} MB`));
   await assert.rejects(importFile(bytes(`Id\n${'1\n'.repeat(MAX_ROWS + 1)}`), 'large.csv'), /50,000 data rows/);
   await assert.rejects(importFile(bytes(`${Array.from({ length: MAX_COLUMNS + 1 }, (_, index) => `C${index}`).join(',')}\n`), 'wide.csv'), /512 columns/);
   await assert.rejects(importFile(Buffer.from([0xff, 0xfe, 0x61]), 'utf16.csv'), /UTF-8/);

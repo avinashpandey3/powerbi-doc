@@ -49,7 +49,17 @@ Tabular imports infer `string`, `int64`, `decimal`, `boolean`, and ISO `dateTime
 
 Data files do not describe Power BI measures or relationships. Add these to the model JSON or import BIM/model metadata that contains them. The result is a documentation model, not a deployable Power BI semantic model or PBIX file.
 
-Limits: 2 MB per uploaded file and for combined model JSON; 50,000 data rows per file/workbook; 512 columns per table; 128 tables per metadata file/workbook. Workbooks must be unencrypted, expand to at most 20 MB, and contain at most 250,000 cells. Headers must be nonempty and unique. Text files must be UTF-8.
+Uploads default to **10 MB per file**. Set `MAX_UPLOAD_MB` to a positive whole number to change this limit, then restart or redeploy the service. For example:
+
+```sh
+MAX_UPLOAD_MB=25 npm start
+```
+
+On Render, add `MAX_UPLOAD_MB=25` in the service's **Environment** settings and redeploy. The UI reads the active limit from `/api/limits`, so its label and validation match the server. Zero does not mean unlimited, and invalid settings fail startup with a clear error.
+
+The original 2 MB upload cap was a conservative setting for the free hosting tier, not a file-format restriction. Imports are parsed in memory, and compressed workbooks can expand far beyond their upload size. An unlimited upload would risk exhausting memory or restarting the service. Raising the upload limit does not remove separate parsing limits; very large datasets need streaming or background processing and suitable hosting resources.
+
+Other limits: 2 MB for editable/combined model JSON; 50,000 data rows per file/workbook; 512 columns per table; 128 tables per metadata file/workbook. Workbooks must be unencrypted, expand to at most 20 MB, and contain at most 250,000 cells. Headers must be nonempty and unique. Text files must be UTF-8.
 
 Legacy XLS, ODS, Parquet, PBIX, PBIP, TMDL, PDF, and image files are not supported. Convert spreadsheets to XLSX/CSV or export Power BI model metadata as BIM/JSON. New formats can be added through the adapters in `importers.js`.
 
