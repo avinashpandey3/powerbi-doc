@@ -3,7 +3,7 @@ services:
     name: powerbi-doc
     runtime: node
     plan: free
-    buildCommand: npm test
+    buildCommand: npm ci && npm test
     startCommand: npm start
     healthCheckPath: /health
     envVars:

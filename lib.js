@@ -2,7 +2,7 @@ export function validateModel(model) {
   if (!model || !Array.isArray(model.tables) || !model.tables.length) throw new Error('Model must contain a nonempty tables array.');
   const names = new Set();
   for (const table of model.tables) {
-    if (typeof table.name !== 'string' || !table.name.trim() || names.has(table.name)) throw new Error('Tables need unique, nonempty names.');
+    if (!table || typeof table.name !== 'string' || !table.name.trim() || names.has(table.name)) throw new Error('Tables need unique, nonempty names.');
     names.add(table.name);
     for (const key of ['columns', 'measures']) {
       if (table[key] !== undefined && !Array.isArray(table[key])) throw new Error(`${table.name}.${key} must be an array.`);

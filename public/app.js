@@ -1,3 +1,4 @@
+import { combineModels } from './import-model.js';
 const $ = id => document.getElementById(id);
 const example = {
   name: 'Retail Analytics',
@@ -11,6 +12,7 @@ const example = {
 const busy = new Set();
 let markdown = '', dax = '', modelRevision = 0, daxRevision = 0, importRevision = 0, validSource = false;
 let sourceCaption = 'Sample metadata · editable';
+let importController;
 
 function model() {
   if (new TextEncoder().encode($('model').value).length > 2_000_000) throw new Error('Metadata exceeds 2 MB. Use a smaller model export.');
@@ -52,6 +54,7 @@ function updateButtons() {
   for (const id of ['generate-docs', 'analyze']) $(id).disabled = !validSource || busy.has(id);
   const template = $('template').value;
   $('generate-dax').disabled = !validSource || busy.has('generate-dax') || !$('table').value || (template !== 'count' && !$('column').value) || (template === 'ytd' && (!$('date-table').value || !$('date-column').value));
+  $('export-model').disabled = !validSource;
 }
 function templateFields() {
   const count = $('template').value === 'count', ytd = $('template').value === 'ytd';
@@ -97,6 +100,8 @@ function resetDax() {
 }
 function reset() {
   modelRevision++; importRevision++; markdown = '';
+  importController?.abort(); importController = undefined; setImportBusy(false);
+  $('import-feedback').hidden = true; $('import-details').hidden = true; $('import-details-list').replaceChildren();
   $('download').disabled = true; $('copy-docs').disabled = true;
   $('docs-output').textContent = ''; $('docs-output').hidden = true; $('docs-empty').hidden = false;
   resetDax(); $('findings').replaceChildren(); $('findings').hidden = true; $('analysis-empty').hidden = false;
@@ -146,24 +151,64 @@ $('format-guide').addEventListener('toggle', () => $('help').setAttribute('aria-
 $('sample').onclick = () => { $('model').value = JSON.stringify(example, null, 2); sourceCaption = 'Sample metadata · editable'; reset(); status('Example model loaded. Choose a tool to begin.'); };
 $('model').addEventListener('input', () => { sourceCaption = 'Edited metadata'; reset(); });
 $('import').onclick = () => $('file').click();
-async function importFile(file) {
-  if (!file) return;
+function setImportBusy(value) {
+  $('import').disabled = value; $('import').setAttribute('aria-busy', String(value));
+  $('import-label').textContent = value ? 'Importing…' : 'Import files';
+  $('import-mode').disabled = value;
+}
+function importFeedback(message, failed = false) {
+  $('import-feedback').textContent = message; $('import-feedback').hidden = false;
+  $('import-feedback').classList.toggle('failed', failed);
+}
+async function importFiles(files) {
+  if (!files.length) return;
+  importController?.abort();
+  const controller = new AbortController(); importController = controller;
   const revision = ++importRevision;
   $('file').value = '';
+  setImportBusy(true); showError('');
+  $('import-details').hidden = true; $('import-details-list').replaceChildren();
   try {
-    if (file.size > 2_000_000) throw new Error('File exceeds 2 MB. Use a smaller model export.');
-    if (!/\.json$/i.test(file.name)) throw new Error('Choose a .json metadata file. PBIX files are not supported.');
-    const text = await file.text();
+    if (files.length > 10) throw new Error('Choose up to 10 files per import.');
+    const mode = $('import-mode').value;
+    const existing = mode === 'append' ? model() : undefined;
+    for (const file of files) {
+      if (file.size > 2_000_000) throw new Error(`${file.name}: file exceeds 2 MB.`);
+      if (!/\.(csv|tsv|txt|xlsx|json|jsonl|ndjson|xml|bim)$/i.test(file.name)) throw new Error(`${file.name}: unsupported format. Use CSV, TSV, delimited TXT, XLSX, JSON, JSONL, XML, or BIM.`);
+    }
+    const results = [], notes = [], warnings = [];
+    for (const [index, file] of files.entries()) {
+      importFeedback(`Reading ${index + 1} of ${files.length}: ${file.name}`); status('Building model metadata…');
+      const response = await fetch(`/api/import?filename=${encodeURIComponent(file.name)}`, { method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body: file, signal: controller.signal });
+      const data = await response.json();
+      if (!response.ok) throw new Error(`${file.name}: ${data.error || 'Import failed.'}`);
+      if (revision !== importRevision) return;
+      results.push(data.result.model);
+      notes.push(`${file.name} → ${data.result.model.tables.map(t => `${t.name}${t.rowCount === undefined ? '' : ` (${t.rowCount.toLocaleString()} rows)`}`).join(', ')}`);
+      warnings.push(...data.result.warnings.map(warning => `${file.name}: ${warning}`));
+    }
+    const combined = combineModels(results, { existing, mode });
+    warnings.push(...combined.warnings);
+    const text = JSON.stringify(combined.model, null, 2);
+    if (new TextEncoder().encode(text).length > 2_000_000) throw new Error('Combined model metadata exceeds 2 MB. Import fewer tables.');
     if (revision !== importRevision) return;
-    $('model').value = text; sourceCaption = `Imported metadata · ${file.name}`; reset();
-    if (validSource) status('JSON imported. Choose a tool to continue.');
-    else status('Imported source needs attention. Check the message below the editor.');
-  } catch (e) { if (revision === importRevision) { showError(e.message); status('Import failed. Existing metadata kept.'); } }
+    $('model').value = text; sourceCaption = `Imported metadata · ${files.length} ${files.length === 1 ? 'file' : 'files'}`; reset();
+    const added = results.reduce((n, result) => n + result.tables.length, 0);
+    importFeedback(`${files.length} ${files.length === 1 ? 'file' : 'files'} imported · ${added} ${added === 1 ? 'table' : 'tables'} ${mode === 'append' ? 'added' : 'loaded'}`);
+    $('import-details-title').textContent = `Import details · ${warnings.length} ${warnings.length === 1 ? 'warning' : 'warnings'}`;
+    $('import-details').hidden = false; $('import-details').open = warnings.length > 0;
+    for (const message of notes) { const li = document.createElement('li'); li.textContent = message; $('import-details-list').append(li); }
+    for (const message of warnings) { const li = document.createElement('li'); li.className = 'import-warning'; li.textContent = `WARNING: ${message}`; $('import-details-list').append(li); }
+    status('Model built. Review the metadata, then choose a tool.');
+  } catch (e) {
+    if (revision === importRevision) { importFeedback(`${e.message} Existing model kept.`, true); status('Import failed. Existing model kept.'); }
+  } finally { if (importController === controller) { importController = undefined; setImportBusy(false); } }
 }
-$('file').onchange = () => importFile($('file').files[0]);
+$('file').onchange = () => importFiles([...$('file').files]);
+$('import-mode').onchange = () => $('import-mode-hint').textContent = $('import-mode').value === 'append' ? 'Keeps existing tables and adds files in this batch.' : 'Replaces current metadata. Files in this batch are combined.';
 for (const name of ['dragenter', 'dragover']) $('dropzone').addEventListener(name, event => { event.preventDefault(); $('dropzone').classList.add('drag-over'); });
 $('dropzone').addEventListener('dragleave', event => { if (!$('dropzone').contains(event.relatedTarget)) $('dropzone').classList.remove('drag-over'); });
-$('dropzone').addEventListener('drop', event => { event.preventDefault(); $('dropzone').classList.remove('drag-over'); importFile(event.dataTransfer.files[0]); });
+$('dropzone').addEventListener('drop', event => { event.preventDefault(); $('dropzone').classList.remove('drag-over'); importFiles([...event.dataTransfer.files]); });
 $('template').onchange = () => { resetDax(); templateFields(); status('Template updated. Generate a new measure.'); showError(''); };
 $('table').onchange = () => { columns('table', 'column'); resetDax(); updateButtons(); };
 $('date-table').onchange = () => { columns('date-table', 'date-column'); resetDax(); updateButtons(); };
@@ -203,10 +248,14 @@ async function copy(value, label) {
   catch { showError('Clipboard access is unavailable. Select and copy the output manually.'); }
 }
 $('copy-docs').onclick = () => copy(markdown, 'Documentation'); $('copy-dax').onclick = () => copy(dax, 'DAX measure');
-$('download').onclick = () => {
-  const url = URL.createObjectURL(new Blob([markdown], { type: 'text/markdown' })), a = document.createElement('a');
+function download(contents, extension, mime) {
+  const url = URL.createObjectURL(new Blob([contents], { type: mime })), a = document.createElement('a');
   const name = String(model().name || 'model').replace(/[^a-zA-Z0-9_-]/g, '-').replace(/-+/g, '-');
-  a.href = url; a.download = `${name}-documentation.md`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  a.href = url; a.download = `${name}-${extension}`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+$('download').onclick = () => {
+  download(markdown, 'documentation.md', 'text/markdown');
   status('Markdown export downloaded.');
 };
+$('export-model').onclick = () => { download(JSON.stringify(model(), null, 2), 'model.json', 'application/json'); status('Model JSON exported. Data rows are not included.'); };
 $('sample').click();

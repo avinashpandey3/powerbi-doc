@@ -42,4 +42,21 @@ test('hosted server serves health, UI, and model tools on an assigned port', { t
     const response = await fetch(`${base}/api/${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input) });
     assert.equal(response.status, 200); check((await response.json()).result);
   }
+  const imported = await fetch(`${base}/api/import?filename=sales.csv`, { method: 'POST', body: 'Id,Amount\n001,12.50\n002,20.00' });
+  assert.equal(imported.status, 200);
+  const metadata = (await imported.json()).result.model;
+  assert.equal(metadata.tables[0].columns[0].dataType, 'string');
+  const docs = await fetch(`${base}/api/docs`, { method: 'POST', body: JSON.stringify(metadata) });
+  assert.equal(docs.status, 200);
+  assert.match((await docs.json()).result, /Amount/);
+  const malformed = await fetch(`${base}/api/import?filename=broken.json`, { method: 'POST', body: '{' });
+  assert.equal(malformed.status, 400);
+  assert.equal(typeof (await malformed.json()).error, 'string');
+  const unsupported = await fetch(`${base}/api/import?filename=model.pbix`, { method: 'POST', body: 'not a pbix' });
+  assert.equal(unsupported.status, 400);
+  const oversized = await fetch(`${base}/api/import?filename=large.csv`, { method: 'POST', body: 'A'.repeat(2_000_001) });
+  assert.equal(oversized.status, 413);
+  assert.match((await oversized.json()).error, /2 MB/);
+  const module = await fetch(`${base}/import-model.js`);
+  assert.equal(module.status, 200);
 });

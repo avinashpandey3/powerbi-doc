@@ -1453,6 +1453,73 @@ button:focus-visible,a:focus-visible,textarea:focus-visible,select:focus-visible
   min-width: 0;
 }
 
+.import-mode-label {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  text-align: left;
+  width: 100%;
+}
+
+.import-zone select {
+  font-size: 11px;
+  min-height: 34px;
+  margin: 7px 0 12px;
+}
+
+.import-zone .import-mode-hint {
+  font-size: 10px;
+  line-height: 1.6;
+  margin: 12px 0 0;
+}
+
+.import-results {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+.import-feedback {
+  color: #b0d897;
+  font-size: 11px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.import-feedback.failed {
+  color: #ffac9e;
+}
+
+#import-details {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  margin-bottom: 12px;
+  font-size: 10px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+#import-details summary {
+  padding: 9px 12px;
+  cursor: pointer;
+  color: var(--text);
+}
+
+#import-details ul {
+  padding: 0 22px 0 30px;
+  margin: 0 0 12px;
+  max-height: 220px;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+}
+
+#import-details li {
+  margin: 8px 0;
+}
+
+.import-warning {
+  color: #f0c582;
+}
+
 @media (max-width: 360px) {
   .tab .icon {
     display: none;
