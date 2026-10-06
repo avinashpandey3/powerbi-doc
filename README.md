@@ -1,2 +1,2 @@
-# powerbi-doc
+# POWERBI-DOC
 AI toolkit for Power BI development, DAX generation, modeling, debugging, and analytics.
