@@ -1,5 +1,5 @@
 # POWERBI-DOC
-AI toolkit for Power BI development, DAX generation, modeling, debugging, and analytics.
+Toolkit for Power BI model documentation, DAX templates, and metadata analysis.
 
 ## Run locally
 
@@ -34,6 +34,6 @@ Load the built-in retail example or import normalized JSON using this structure:
 }
 ```
 
-Relationships use `fromTable`, `fromColumn`, `toTable`, `toColumn`, `cardinality`, and `crossFilteringBehavior`. Inputs are limited to 2 MB. Metadata is processed locally and is not persisted.
+Relationships use `fromTable`, `fromColumn`, `toTable`, `toColumn`, `cardinality`, and `crossFilteringBehavior`. Inputs are limited to 2 MB. Metadata is sent to the workspace server for processing and is not persisted.
 
 This version uses deterministic templates and metadata heuristics. It does not connect to Power BI, execute DAX, parse PBIX files, or use an AI provider. Review formulas and findings in Power BI Desktop. No account or API key is needed.
