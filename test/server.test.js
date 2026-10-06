@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 test('hosted server serves health, UI, and model tools on an assigned port', { timeout: 10000 }, async t => {
   const child = spawn(process.execPath, [fileURLToPath(new URL('../server.js', import.meta.url))], {
-    env: { ...process.env, HOST: '0.0.0.0', PORT: '0' },
+    env: { ...process.env, HOST: '0.0.0.0', PORT: '0', MAX_UPLOAD_MB: '3' },
     stdio: ['ignore', 'pipe', 'pipe']
   });
   t.after(async () => {
@@ -29,6 +29,9 @@ test('hosted server serves health, UI, and model tools on an assigned port', { t
   const health = await fetch(`${base}/health`);
   assert.equal(health.status, 200);
   assert.deepEqual(await health.json(), { status: 'ok' });
+  const limitsResponse = await fetch(`${base}/api/limits`);
+  assert.equal(limitsResponse.headers.get('cache-control'), 'no-store');
+  assert.deepEqual(await limitsResponse.json(), { maxUploadBytes: 3_000_000, maxModelBytes: 2_000_000, maxFiles: 10 });
   const home = await fetch(base);
   assert.equal(home.status, 200);
   assert.match(await home.text(), /Understand your model/);
@@ -54,9 +57,17 @@ test('hosted server serves health, UI, and model tools on an assigned port', { t
   assert.equal(typeof (await malformed.json()).error, 'string');
   const unsupported = await fetch(`${base}/api/import?filename=model.pbix`, { method: 'POST', body: 'not a pbix' });
   assert.equal(unsupported.status, 400);
-  const oversized = await fetch(`${base}/api/import?filename=large.csv`, { method: 'POST', body: 'A'.repeat(2_000_001) });
+  const largeCsv = 'Name,Note\n' + ('Item,' + 'A'.repeat(110) + '\n').repeat(20_000);
+  assert.ok(Buffer.byteLength(largeCsv) > 2_000_000);
+  const largerImport = await fetch(`${base}/api/import?filename=larger.csv`, { method: 'POST', body: largeCsv });
+  assert.equal(largerImport.status, 200);
+  assert.equal((await largerImport.json()).result.model.tables[0].rowCount, 20_000);
+  const oversized = await fetch(`${base}/api/import?filename=large.csv`, { method: 'POST', body: 'A'.repeat(3_000_001) });
   assert.equal(oversized.status, 413);
-  assert.match((await oversized.json()).error, /2 MB/);
+  assert.match((await oversized.json()).error, /Uploaded file exceeds 3 MB/);
+  const oversizedMetadata = await fetch(`${base}/api/docs`, { method: 'POST', body: 'A'.repeat(2_000_001) });
+  assert.equal(oversizedMetadata.status, 413);
+  assert.match((await oversizedMetadata.json()).error, /Model metadata exceeds 2 MB/);
   const module = await fetch(`${base}/import-model.js`);
   assert.equal(module.status, 200);
 });
