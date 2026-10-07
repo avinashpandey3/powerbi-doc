@@ -180,7 +180,7 @@ function metadataModel(input, filename, format) {
     });
     const cleanedMeasures = measures.map(measure => {
       if (!isRecord(measure)) throw new Error('Each model measure must be an object.');
-      const result = pick(measure, ['name', 'expression', 'description', 'formatString', 'isHidden', 'displayFolder']);
+      const result = pick(measure, ['name', 'expression', 'description', 'dataType', 'formatString', 'isHidden', 'displayFolder']);
       return result;
     });
     const result = { ...pick(table, ['name', 'description', 'isHidden']), columns: cleanedColumns, measures: cleanedMeasures };

@@ -1,80 +1,919 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0c1119">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%228%22%20fill%3D%22%23c2f378%22%2F%3E%3Cpath%20d%3D%22m16%207%209%205-9%205-9-5%209-5Zm-9%2010%209%205%209-5m-18%205%209%205%209-5%22%20fill%3D%22none%22%20stroke%3D%22%23162311%22%20stroke-width%3D%221.6%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E">
-  <title>PowerBI Doc — Model workspace</title><link rel="stylesheet" href="/style.css">
-</head>
-<body>
-  <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-    <symbol id="i-model" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5Z M3 12l9 5 9-5 M3 16l9 5 9-5"/></symbol>
-    <symbol id="i-doc" viewBox="0 0 24 24"><path d="M14 3H5v18h14V8l-5-5Z M14 3v5h5 M8 12h8 M8 16h6"/></symbol>
-    <symbol id="i-code" viewBox="0 0 24 24"><path d="m7 7-5 5 5 5 M17 7l5 5-5 5 M14 4l-4 16"/></symbol>
-    <symbol id="i-graph" viewBox="0 0 24 24"><rect x="2" y="8" width="6" height="8" rx="1"/><rect x="16" y="2" width="6" height="6" rx="1"/><rect x="16" y="16" width="6" height="6" rx="1"/><path d="M8 12h4V5h4 M12 12v7h4"/></symbol>
-    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V3 m-5 5 5-5 5 5 M4 15v6h16v-6"/></symbol>
-    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h16 m-6-6 6 6-6 6"/></symbol>
-    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V3H3v13h5"/></symbol>
-    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12 m-5-5 5 5 5-5 M4 16v5h16v-5"/></symbol>
-    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
-    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6 M12 7v1"/></symbol>
-  </svg>
-  <a class="skip-link" href="#workspace">Skip to workspace</a>
-  <header class="topbar">
-    <a class="brand" href="/" aria-label="PowerBI Doc home"><span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="#i-model"/></svg></span><span>PowerBI<span class="brand-light"> Doc</span></span></a>
-    <span class="top-divider"></span><span class="top-context">Model workspace</span>
-    <div class="top-actions"><span class="local-badge"><span class="status-dot"></span>Workspace processing</span><button id="help" class="button quiet" aria-expanded="false" aria-controls="format-guide"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg><span>Format guide</span></button></div>
-  </header>
-  <main>
-    <section class="page-heading">
-      <div><p class="eyebrow"><span class="tiny-square"></span>POWER BI DEVELOPER TOOLKIT</p><h1>Understand your model.<span class="title-dot">_</span></h1><p class="page-description">Turn model metadata into documentation, DAX measures, and actionable insights.</p></div>
-      <span class="version-tag">WORKSPACE <span>v0.1</span></span>
-    </section>
-    <section class="model-overview" aria-label="Model overview">
-      <div class="model-identity"><span class="overview-icon"><svg class="icon" aria-hidden="true"><use href="#i-model"/></svg></span><div><span class="metric-label">ACTIVE MODEL</span><h2 id="model-name">No model loaded</h2><span id="model-caption" class="model-caption">Import metadata to begin</span></div></div>
-      <div class="metric"><span class="metric-label">TABLES</span><strong id="table-count">—</strong><span id="column-count" class="metric-detail">— columns</span></div>
-      <div class="metric"><span class="metric-label">MEASURES</span><strong id="measure-count">—</strong><span class="metric-detail">DAX expressions</span></div>
-      <div class="metric"><span class="metric-label">RELATIONSHIPS</span><strong id="relationship-count">—</strong><span class="metric-detail">Model connections</span></div>
-    </section>
-    <details id="format-guide" class="format-guide"><summary>Import formats <span id="guide-file-limits">Loading upload limits…</span></summary><div class="guide-body"><p><strong>CSV, TSV, delimited TXT:</strong> the first row provides column names. Quoted fields and multiline values are supported.</p><p><strong>Excel XLSX:</strong> each nonempty worksheet becomes a table. Rows are streamed and counted; types are inferred from the first 5,000 data rows. Import details show the detected header row. Review skipped report headings and sampled types. Formulas use cached results; formulas and macros are never executed.</p><p><strong>JSON:</strong> use normalized model metadata, an array of flat records, or a <code>rows</code>/<code>data</code> array. <strong>JSONL / NDJSON:</strong> one flat record per line. <strong>XML:</strong> one root with repeated flat record children.</p><p><strong>Power BI BIM:</strong> imports model tables, columns, measures, and relationships. Tabular files provide inferred columns and types, with row counts. They do not supply DAX measures or model relationships.</p><p>Select <strong>Replace model</strong> to start a new model or <strong>Add tables</strong> to extend the current one. Duplicate table names get a suffix; relationships from metadata files follow those renamed tables. An import failure keeps the current model.</p><p>Legacy XLS, PBIX, PBIP, TMDL, PDF, images, and other formats are not supported. Save spreadsheets as XLSX/CSV, or export Power BI metadata as BIM/JSON.</p><p><span id="model-limit-label">Generated model JSON is limited to 2 MB.</span> CSV/JSON/XML are limited to 50,000 data rows; Excel workbooks may expand to 200 MB. Tables may have up to 512 columns. Excel merged ranges do not count as data cells.</p><p>The result is editable model metadata, not a runnable Power BI dataset. Data rows are processed in this workspace and are not saved.</p><pre>{ "name": "Retail", "tables": [{ "name": "Sales", "columns": [{ "name": "Amount", "dataType": "decimal" }], "measures": [{ "name": "Revenue", "expression": "SUM('Sales'[Amount])" }] }], "relationships": [] }</pre></div></details>
-    <section id="workspace" class="workspace" aria-label="Model tools">
-      <aside class="source-pane" aria-labelledby="source-title">
-        <div class="pane-heading"><h2 id="source-title"><svg class="icon" aria-hidden="true"><use href="#i-code"/></svg>Model source</h2><span class="mono-tag">JSON</span></div>
-        <div class="source-content">
-          <div id="dropzone" class="import-zone"><span class="upload-glyph"><svg class="icon" aria-hidden="true"><use href="#i-upload"/></svg></span><strong>Build a model from your files</strong><p>Drop files here, or choose files.</p><label class="import-mode-label" for="import-mode">Import mode</label><select id="import-mode"><option value="replace">Replace model</option><option value="append">Add tables to current model</option></select><button id="import" class="button secondary" disabled><span id="import-label">Import files</span><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></button><input id="file" class="visually-hidden" tabindex="-1" type="file" multiple accept=".csv,.tsv,.txt,.xlsx,.json,.jsonl,.ndjson,.xml,.bim" aria-label="Import model or data files"><span class="import-limit">CSV / TSV / TXT / XLSX / JSON / XML / BIM</span><span class="import-limit">JSONL / NDJSON · <span id="upload-limit-label">LOADING UPLOAD LIMITS…</span></span><p class="import-mode-hint" id="import-mode-hint">Replaces current metadata. Files in this batch are combined.</p></div>
-          <div class="editor-label"><label for="model">Edit model JSON</label><button id="sample" class="text-button">Load example <span aria-hidden="true">↗</span></button></div>
-          <div class="editor-shell"><div class="editor-toolbar"><span><span class="file-dot"></span>model.json</span><span class="editor-language">{ }</span></div><textarea id="model" spellcheck="false" autocapitalize="off" autocomplete="off" aria-describedby="source-status" aria-label="Model metadata JSON"></textarea><div class="editor-footer"><span>JSON · UTF-8</span><span id="char-count">0 chars</span></div></div>
-          <div id="source-status" class="source-status" role="status"></div>
-          <div class="import-results"><p id="import-feedback" class="import-feedback" role="status" hidden></p><details id="import-details" hidden><summary id="import-details-title">Import details</summary><ul id="import-details-list"></ul></details><button id="export-model" class="button compact" disabled><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>Export model JSON</button></div>
-          <p class="privacy-note"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Processed in this workspace. No persistent storage.</p>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#0b1017" />
+    <title>PowerBI Doctor — A clearer model. A smarter report.</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23a7f3d0'/%3E%3Cpath d='M7 17h5l3-7 4 13 3-6h3' fill='none' stroke='%230b1017' stroke-width='2.5'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <svg
+      class="icon-library"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      <symbol id="i-pulse" viewBox="0 0 24 24">
+        <path d="M2 13h5l3-8 4 15 3-7h5" />
+      </symbol>
+      <symbol id="i-doc" viewBox="0 0 24 24">
+        <path d="M14 3H5v18h14V8l-5-5Z M14 3v5h5 M8 12h8 M8 16h6" />
+      </symbol>
+      <symbol id="i-code" viewBox="0 0 24 24">
+        <path d="m7 7-5 5 5 5 M17 7l5 5-5 5 M14 4l-4 16" />
+      </symbol>
+      <symbol id="i-model" viewBox="0 0 24 24">
+        <path d="m12 3 9 5-9 5-9-5 9-5Z M3 12l9 5 9-5 M3 16l9 5 9-5" />
+      </symbol>
+      <symbol id="i-dashboard" viewBox="0 0 24 24">
+        <rect x="3" y="3" width="7" height="7" rx="1" />
+        <rect x="14" y="3" width="7" height="7" rx="1" />
+        <rect x="3" y="14" width="7" height="7" rx="1" />
+        <path d="M14 21v-5 M18 21v-9 M22 21v-7" />
+      </symbol>
+      <symbol id="i-graph" viewBox="0 0 24 24">
+        <rect x="2" y="8" width="6" height="8" rx="1" />
+        <rect x="16" y="2" width="6" height="6" rx="1" />
+        <rect x="16" y="16" width="6" height="6" rx="1" />
+        <path d="M8 12h4V5h4 M12 12v7h4" />
+      </symbol>
+      <symbol id="i-upload" viewBox="0 0 24 24">
+        <path d="M12 16V3 m-5 5 5-5 5 5 M4 15v6h16v-6" />
+      </symbol>
+      <symbol id="i-arrow" viewBox="0 0 24 24">
+        <path d="M4 12h16 m-6-6 6 6-6 6" />
+      </symbol>
+      <symbol id="i-copy" viewBox="0 0 24 24">
+        <rect x="8" y="8" width="12" height="13" rx="2" />
+        <path d="M16 8V3H3v13h5" />
+      </symbol>
+      <symbol id="i-download" viewBox="0 0 24 24">
+        <path d="M12 3v12 m-5-5 5 5 5-5 M4 16v5h16v-5" />
+      </symbol>
+      <symbol id="i-info" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 11v6 M12 7v1" />
+      </symbol>
+      <symbol id="i-spark" viewBox="0 0 24 24">
+        <path
+          d="m12 3 2.6 6.4L21 12l-6.4 2.6L12 21l-2.6-6.4L3 12l6.4-2.6L12 3Z M20 2v4 M18 4h4"
+        />
+      </symbol>
+      <symbol id="i-close" viewBox="0 0 24 24">
+        <path d="m6 6 12 12 M18 6 6 18" />
+      </symbol>
+      <symbol id="i-shield" viewBox="0 0 24 24">
+        <path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6l8-3Z m-4 9 3 3 5-6" />
+      </symbol></svg
+    ><a class="skip-link" href="#workspace">Skip to workspace</a>
+    <aside class="sidebar" aria-label="Workspace navigation">
+      <div class="rail-head">
+        <a class="brand" href="/" aria-label="PowerBI Doctor home"
+          ><span class="brand-mark"
+            ><svg class="icon"><use href="#i-pulse" /></svg></span
+          ><span class="brand-name">PowerBI<span>Doctor</span></span></a
+        ><span class="mobile-version">BETA / 0.2</span>
+      </div>
+      <div class="rail-label">YOUR WORKSPACE</div>
+      <nav
+        class="tool-tabs"
+        role="tablist"
+        aria-label="Model tools"
+        aria-orientation="vertical"
+      >
+        <button
+          id="tab-docs"
+          class="tab active"
+          role="tab"
+          aria-selected="true"
+          aria-controls="docs"
+          tabindex="0"
+          data-panel="docs"
+        >
+          <svg class="icon" aria-hidden="true"><use href="#i-doc" /></svg
+          ><span class="nav-full">Documentation</span
+          ><span class="nav-short" aria-hidden="true">Docs</span
+          ><span class="nav-index">01</span>
+        </button>
+        <button
+          id="tab-dax"
+          class="tab"
+          role="tab"
+          aria-selected="false"
+          aria-controls="dax"
+          tabindex="-1"
+          data-panel="dax"
+        >
+          <svg class="icon" aria-hidden="true"><use href="#i-code" /></svg
+          ><span class="nav-full">DAX Lab</span
+          ><span class="nav-short" aria-hidden="true">DAX</span
+          ><span class="nav-index">02</span>
+        </button>
+        <button
+          id="tab-analysis"
+          class="tab"
+          role="tab"
+          aria-selected="false"
+          aria-controls="analysis"
+          tabindex="-1"
+          data-panel="analysis"
+        >
+          <svg class="icon" aria-hidden="true"><use href="#i-pulse" /></svg
+          ><span class="nav-full">Model Doctor</span
+          ><span class="nav-short" aria-hidden="true">Doctor</span
+          ><span class="nav-index">03</span>
+        </button>
+        <button
+          id="tab-dashboard"
+          class="tab"
+          role="tab"
+          aria-selected="false"
+          aria-controls="dashboard"
+          tabindex="-1"
+          data-panel="dashboard"
+        >
+          <svg class="icon" aria-hidden="true"><use href="#i-dashboard" /></svg
+          ><span class="nav-full">Dashboard Studio</span
+          ><span class="nav-short" aria-hidden="true">Studio</span
+          ><span class="nav-index">04</span>
+        </button>
+      </nav>
+      <div class="rail-model">
+        <span class="small-label">IN THIS SESSION</span>
+        <div class="rail-model-title">
+          <span class="status-dot"></span
+          ><span id="rail-model-name">No model loaded</span>
         </div>
-      </aside>
-      <article class="tools-pane">
-        <nav class="tool-tabs" role="tablist" aria-label="Model tools"><button id="tab-docs" class="tab active" role="tab" aria-selected="true" aria-controls="docs" tabindex="0" data-panel="docs"><svg class="icon" aria-hidden="true"><use href="#i-doc"/></svg><span>Documentation</span></button><button id="tab-dax" class="tab" role="tab" aria-selected="false" aria-controls="dax" tabindex="-1" data-panel="dax"><svg class="icon" aria-hidden="true"><use href="#i-code"/></svg><span>DAX assistant</span></button><button id="tab-analysis" class="tab" role="tab" aria-selected="false" aria-controls="analysis" tabindex="-1" data-panel="analysis"><svg class="icon" aria-hidden="true"><use href="#i-graph"/></svg><span>Model analysis</span></button></nav>
+        <p>Metadata in your workspace.<br />Your next idea starts here.</p>
+      </div>
+      <div class="rail-footer">
+        <button
+          id="help"
+          class="rail-help"
+          aria-expanded="false"
+          aria-controls="format-guide"
+        >
+          <svg class="icon" aria-hidden="true"><use href="#i-info" /></svg
+          ><span>Import &amp; format guide</span>
+        </button>
+        <div class="rail-provider">
+          <span id="rail-ai-dot" class="status-dot muted"></span
+          ><span id="rail-ai-status">Checking AI settings</span>
+        </div>
+        <span class="build-version">POWERBI DOCTOR <span>v0.2</span></span>
+      </div>
+    </aside>
+    <div class="main-shell">
+      <header class="topbar">
+        <div class="breadcrumb">
+          <span>WORKSPACE</span><span>/</span
+          ><strong id="current-tool">Documentation</strong>
+        </div>
+        <div class="top-actions">
+          <span class="session-badge"
+            ><span class="status-dot"></span>Workspace session</span
+          ><button id="sample" class="button quiet">Load example</button
+          ><button id="open-import" class="button secondary">
+            <svg class="icon" aria-hidden="true"><use href="#i-upload" /></svg
+            >Import model
+          </button>
+        </div>
+      </header>
+      <main id="workspace" tabindex="-1">
+        <section class="page-heading">
+          <div>
+            <p class="eyebrow">
+              <span class="tiny-square"></span>LESS GUESSWORK. MORE CLARITY.
+            </p>
+            <h1>A clearer model.<br /><span>A smarter report.</span></h1>
+            <p class="page-description">
+              Document it. Build better DAX. Find the friction.<br
+                class="desktop-break"
+              />
+              Turn your next dashboard into a plan.
+            </p>
+          </div>
+          <div class="hero-art" aria-hidden="true">
+            <div class="orbit orbit-one"></div>
+            <div class="orbit orbit-two"></div>
+            <span class="hero-node node-doc"
+              ><svg class="icon"><use href="#i-doc" /></svg></span
+            ><span class="hero-node node-code"
+              ><svg class="icon"><use href="#i-code" /></svg></span
+            ><span class="hero-node node-chart"
+              ><svg class="icon"><use href="#i-dashboard" /></svg></span
+            ><span class="hero-core"
+              ><svg class="icon"><use href="#i-pulse" /></svg></span
+            ><span class="hero-coordinate">MODEL → MEANING</span>
+          </div>
+        </section>
+        <section class="model-overview" aria-label="Active model overview">
+          <div class="model-identity">
+            <span class="overview-icon"
+              ><svg class="icon" aria-hidden="true"><use href="#i-model" /></svg
+            ></span>
+            <div>
+              <span class="small-label">ACTIVE MODEL</span>
+              <h2 id="model-name">No model loaded</h2>
+              <span id="model-caption" class="model-caption"
+                >Import metadata to begin</span
+              >
+            </div>
+            <button
+              id="manage-source"
+              class="button icon-button"
+              aria-label="Manage model source"
+              title="Manage model source"
+            >
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-upload" />
+              </svg>
+            </button>
+          </div>
+          <div class="metric">
+            <strong id="table-count">—</strong><span>Tables</span>
+          </div>
+          <div class="metric">
+            <strong id="column-count">—</strong><span>Columns</span>
+          </div>
+          <div class="metric">
+            <strong id="measure-count">—</strong><span>Measures</span>
+          </div>
+          <div class="metric">
+            <strong id="relationship-count">—</strong><span>Relationships</span>
+          </div>
+        </section>
+        <details id="format-guide" class="format-guide">
+          <summary>
+            Import &amp; format guide
+            <span id="guide-file-limits">Loading upload limits…</span>
+          </summary>
+          <div class="guide-body">
+            <div>
+              <h3>Data files</h3>
+              <p>
+                <strong>CSV / TSV / TXT:</strong> a header row and comma, tab,
+                semicolon, or pipe separators. Quoted fields and multiline
+                values are supported.
+              </p>
+              <p>
+                <strong>Excel XLSX:</strong> sheets become tables. All rows are
+                counted; types use the first 5,000 data rows. Review detected
+                headers and sampling notes. Formulas use cached results and are
+                never executed.
+              </p>
+              <p>
+                <strong>JSON / JSONL / NDJSON / XML:</strong> flat record
+                arrays, one object per line, or repeated flat XML records. JSON
+                also accepts a <code>rows</code> or <code>data</code> wrapper.
+              </p>
+            </div>
+            <div>
+              <h3>Model metadata</h3>
+              <p>
+                <strong>BIM / JSON:</strong> tables, columns, DAX measures, and
+                relationships. Data files infer columns and types; add measures
+                and relationships separately.
+              </p>
+              <p>
+                Replace the model or add tables. Duplicate names receive a
+                suffix; relationships follow the renamed tables. Review DAX
+                after renaming. Failed batches keep the current model.
+              </p>
+              <p>
+                <span id="model-limit-label"
+                  >Generated model JSON is limited to 2 MB.</span
+                >
+                CSV/JSON/XML: up to 50,000 rows. Excel: up to 200 MB expanded,
+                with merged ranges excluded from data counts. Up to 512 columns
+                per table.
+              </p>
+              <p>
+                PBIX, PBIP, TMDL, XLS, PDF, and images need conversion. Data
+                rows are processed in memory and are not saved. This workspace
+                produces metadata and guidance, not a runnable dataset.
+              </p>
+            </div>
+          </div>
+        </details>
         <div id="error" class="error-banner" role="alert" hidden></div>
-        <section id="docs" class="panel" role="tabpanel" aria-labelledby="tab-docs" tabindex="0">
-          <div class="tool-intro"><span class="tool-kicker">01 / DOCUMENT</span><h2>Knowledge, ready to share.</h2><p>A clear reference for every table, column, measure, and relationship in your model.</p></div>
-          <div class="action-row"><button class="button primary" id="generate-docs"><svg class="icon" aria-hidden="true"><use href="#i-doc"/></svg><span>Generate documentation</span><svg class="icon action-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></button><span class="action-hint">Markdown export</span></div>
-          <div class="output-card"><div class="output-toolbar"><span><span class="output-dot"></span>DOCUMENTATION <span class="output-format">.md</span></span><div class="output-actions"><button id="copy-docs" class="button icon-button" disabled aria-label="Copy documentation" title="Copy documentation"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg></button><button id="download" class="button compact" disabled><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg>Export</button></div></div><div id="docs-empty" class="empty-state"><span class="empty-glyph"><svg class="icon" aria-hidden="true"><use href="#i-doc"/></svg></span><h3>Your model, documented.</h3><p>Generate a reference from the model source.<br>Then copy or export it as Markdown.</p><span class="empty-chip">TABLES / MEASURES / RELATIONSHIPS</span></div><pre id="docs-output" hidden></pre></div>
-          <div class="tool-note"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg><p>Documentation reflects the metadata you provide. Add descriptions to make the reference more useful.</p></div>
-        </section>
-        <section id="dax" class="panel" role="tabpanel" aria-labelledby="tab-dax" tabindex="0" hidden>
-          <div class="tool-intro"><span class="tool-kicker">02 / CREATE</span><h2>A measure with a clear purpose.</h2><p>Choose a calculation and your model fields. Get a DAX starting point with an explanation.</p></div>
-          <div class="form"><label class="wide-field" for="template">Calculation template<select id="template"><option value="sum">Total — SUM</option><option value="count">Row count — COUNTROWS</option><option value="distinct">Distinct count — DISTINCTCOUNT</option><option value="ytd">Year-to-date — TOTALYTD</option></select></label><label for="table">Source table<select id="table"></select></label><label id="column-field" for="column">Column<select id="column"></select></label><label id="date-table-field" for="date-table" hidden>Date table<select id="date-table"></select></label><label id="date-column-field" for="date-column" hidden>Date column<select id="date-column"></select></label></div>
-          <div class="action-row"><button class="button primary" id="generate-dax"><svg class="icon" aria-hidden="true"><use href="#i-code"/></svg><span>Generate DAX</span><svg class="icon action-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></button><span class="action-hint">Template-based generation</span></div>
-          <div class="output-card"><div class="output-toolbar"><span><span class="output-dot"></span>MEASURE <span class="output-format">DAX</span></span><button id="copy-dax" class="button compact" disabled><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg>Copy</button></div><div id="dax-empty" class="empty-state"><span class="empty-glyph"><svg class="icon" aria-hidden="true"><use href="#i-code"/></svg></span><h3>From intent to expression.</h3><p>Select a template above to build your measure.</p><span class="empty-chip">FILTER CONTEXT, EXPLAINED</span></div><pre id="dax-output" hidden></pre></div>
-          <div id="explanation-card" class="explanation-card" hidden><span class="tool-kicker">HOW IT WORKS</span><p id="explanation"></p></div><div class="tool-note"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg><p>Formulas use deterministic templates and are not executed here. Validate them in Power BI before use.</p></div>
-        </section>
-        <section id="analysis" class="panel" role="tabpanel" aria-labelledby="tab-analysis" tabindex="0" hidden>
-          <div class="tool-intro"><span class="tool-kicker">03 / REVIEW</span><h2>Small signals. Better models.</h2><p>Find documentation gaps, disconnected tables, and relationship patterns that deserve a closer look.</p></div>
-          <div class="action-row"><button class="button primary" id="analyze"><svg class="icon" aria-hidden="true"><use href="#i-graph"/></svg><span>Analyze model</span><svg class="icon action-arrow" aria-hidden="true"><use href="#i-arrow"/></svg></button><span class="action-hint">Metadata checks</span></div>
-          <div class="output-card"><div class="output-toolbar"><span><span class="output-dot"></span>MODEL REVIEW</span><span id="analysis-summary" class="review-summary">Awaiting analysis</span></div><div id="analysis-empty" class="empty-state"><span class="empty-glyph"><svg class="icon" aria-hidden="true"><use href="#i-graph"/></svg></span><h3>Make the next improvement.</h3><p>Run a review to see findings and recommendations.</p><span class="empty-chip">STRUCTURE / DOCUMENTATION / FILTERING</span></div><div id="findings" hidden></div></div>
-          <div class="tool-note"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg><p>This review uses metadata heuristics. It does not inspect data, execute queries, or measure performance.</p></div>
-        </section>
-        <div class="session-status"><span id="action-status" role="status" aria-live="polite">Ready when you are.</span><span><span class="status-dot"></span>WORKSPACE SESSION</span></div>
-      </article>
-    </section>
-    <footer><span><svg class="icon" aria-hidden="true"><use href="#i-model"/></svg>Built for a clearer model.</span><span>METADATA IN. UNDERSTANDING OUT.</span></footer>
-  </main>
-  <script type="module" src="/app.js"></script>
-</body>
+        <div class="tool-workspace">
+          <div class="tool-content">
+            <section
+              id="docs"
+              class="panel"
+              role="tabpanel"
+              aria-labelledby="tab-docs"
+              tabindex="0"
+            >
+              <div class="tool-intro">
+                <span class="tool-kicker">01 / DOCUMENTATION</span>
+                <h2>Make the model<br />make sense.</h2>
+                <p>
+                  A reference your whole team can read. From the big picture to
+                  the detail that matters.
+                </p>
+              </div>
+              <div class="action-row">
+                <button id="generate-docs" class="button primary">
+                  <svg class="icon" aria-hidden="true">
+                    <use href="#i-doc" /></svg
+                  ><span>Generate documentation</span
+                  ><svg class="icon" aria-hidden="true">
+                    <use href="#i-arrow" />
+                  </svg>
+                </button>
+                <div class="export-group">
+                  <button id="download" class="button compact" disabled>
+                    <svg class="icon" aria-hidden="true">
+                      <use href="#i-download" /></svg
+                    >Markdown</button
+                  ><button id="download-html" class="button compact" disabled>
+                    HTML</button
+                  ><button
+                    id="copy-docs"
+                    class="button icon-button"
+                    disabled
+                    aria-label="Copy documentation"
+                  >
+                    <svg class="icon" aria-hidden="true">
+                      <use href="#i-copy" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <div class="document-card">
+                <div class="document-toolbar">
+                  <span><span class="status-dot"></span>MODEL REFERENCE</span
+                  ><span id="docs-ready-status">Live metadata preview</span>
+                </div>
+                <nav class="document-tabs" aria-label="Documentation sections">
+                  <button
+                    class="doc-tab active"
+                    data-doc-view="overview"
+                    aria-pressed="true"
+                  >
+                    Overview</button
+                  ><button
+                    class="doc-tab"
+                    data-doc-view="dictionary"
+                    aria-pressed="false"
+                  >
+                    Data dictionary</button
+                  ><button
+                    class="doc-tab"
+                    data-doc-view="measures"
+                    aria-pressed="false"
+                  >
+                    Measures</button
+                  ><button
+                    class="doc-tab"
+                    data-doc-view="relationships"
+                    aria-pressed="false"
+                  >
+                    Relationships
+                  </button>
+                </nav>
+                <div id="docs-preview" class="document-preview"></div>
+                <div id="docs-empty" class="document-footnote">
+                  Generate documentation to copy or export this reference.
+                </div>
+              </div>
+              <details class="raw-output">
+                <summary>Markdown source <span>.md</span></summary>
+                <pre id="docs-output" hidden></pre>
+              </details>
+              <p class="tool-note">
+                <svg class="icon" aria-hidden="true"><use href="#i-info" /></svg
+                >Descriptions and expressions come from the metadata you
+                provide.
+              </p>
+            </section>
+            <section
+              id="dax"
+              class="panel"
+              role="tabpanel"
+              aria-labelledby="tab-dax"
+              tabindex="0"
+              hidden
+            >
+              <div class="tool-intro">
+                <span class="tool-kicker">02 / DAX LAB</span>
+                <h2>Better measures.<br />Clearer thinking.</h2>
+                <p>
+                  Start with a dependable template, or ask your AI assistant to
+                  create, explain, debug, or optimize DAX.
+                </p>
+              </div>
+              <div class="workspace-mode">
+                <span class="active">Template builder</span
+                ><button id="ask-dax-ai" class="text-button">
+                  Ask AI
+                  <svg class="icon" aria-hidden="true">
+                    <use href="#i-spark" />
+                  </svg>
+                </button>
+              </div>
+              <div class="form dax-form">
+                <label class="wide-field" for="template"
+                  >Calculation template<select id="template">
+                    <option value="sum">Total · SUM</option>
+                    <option value="count">Row count · COUNTROWS</option>
+                    <option value="distinct">
+                      Distinct count · DISTINCTCOUNT
+                    </option>
+                    <option value="average">Average · AVERAGE</option>
+                    <option value="min">Minimum · MIN</option>
+                    <option value="max">Maximum · MAX</option>
+                    <option value="share">Share of total · DIVIDE</option>
+                    <option value="ytd">Year to date · TOTALYTD</option>
+                    <option value="previous-month">Previous month</option>
+                    <option value="yoy">Year-over-year growth</option>
+                    <option value="rolling30">Rolling 30 days</option>
+                  </select></label
+                ><label for="table"
+                  >Source table<select id="table"></select></label
+                ><label id="column-field" for="column"
+                  >Column<select id="column"></select></label
+                ><label id="date-table-field" for="date-table" hidden
+                  >Date table<select id="date-table"></select></label
+                ><label id="date-column-field" for="date-column" hidden
+                  >Date column<select id="date-column"></select
+                ></label>
+              </div>
+              <div class="action-row">
+                <button id="generate-dax" class="button primary">
+                  <svg class="icon" aria-hidden="true">
+                    <use href="#i-code" /></svg
+                  ><span>Build measure</span
+                  ><svg class="icon" aria-hidden="true">
+                    <use href="#i-arrow" />
+                  </svg></button
+                ><span class="action-hint">DETERMINISTIC TEMPLATES</span>
+              </div>
+              <div class="output-card">
+                <div class="output-toolbar">
+                  <span
+                    ><span class="output-dot"></span>MEASURE
+                    <span class="code-label">DAX</span></span
+                  ><button id="copy-dax" class="button compact" disabled>
+                    <svg class="icon" aria-hidden="true">
+                      <use href="#i-copy" /></svg
+                    >Copy
+                  </button>
+                </div>
+                <div id="dax-empty" class="code-empty">
+                  <span class="code-prompt">&gt;_</span>
+                  <h3>Your next measure starts here.</h3>
+                  <p>Choose a template and model fields above.</p>
+                </div>
+                <pre id="dax-output" hidden></pre>
+              </div>
+              <div id="explanation-card" class="explanation-card" hidden>
+                <span class="tool-kicker">UNDER THE EXPRESSION</span>
+                <p id="explanation"></p>
+              </div>
+              <p class="tool-note">
+                <svg class="icon" aria-hidden="true"><use href="#i-info" /></svg
+                >Formulas are not executed here. Validate results and filter
+                context in Power BI.
+              </p>
+              <details class="raw-output">
+                <summary>Review an expression without AI</summary>
+                <label for="dax-review-input" class="small-label"
+                  >DAX EXPRESSION</label
+                ><textarea
+                  id="dax-review-input"
+                  rows="4"
+                  maxlength="16000"
+                  spellcheck="false"
+                  placeholder="Paste an expression to review filter context, division, and date prerequisites."
+                ></textarea
+                ><button id="review-dax" class="button secondary">
+                  Review expression
+                </button>
+                <div id="dax-review-result" aria-live="polite"></div>
+              </details>
+            </section>
+            <section
+              id="analysis"
+              class="panel"
+              role="tabpanel"
+              aria-labelledby="tab-analysis"
+              tabindex="0"
+              hidden
+            >
+              <div class="tool-intro">
+                <span class="tool-kicker">03 / MODEL DOCTOR</span>
+                <h2>Find the friction.<br />Build with confidence.</h2>
+                <p>
+                  Review structure, descriptions, expressions, and
+                  relationships. Get a clear next step for each finding.
+                </p>
+              </div>
+              <div class="action-row">
+                <button id="analyze" class="button primary">
+                  <svg class="icon" aria-hidden="true">
+                    <use href="#i-pulse" /></svg
+                  ><span>Run health check</span
+                  ><svg class="icon" aria-hidden="true">
+                    <use href="#i-arrow" />
+                  </svg></button
+                ><span class="action-hint">METADATA CHECKS</span>
+              </div>
+              <div class="health-card">
+                <div class="health-gauge" id="health-gauge">
+                  <div>
+                    <strong id="health-score">—</strong><span>/ 100</span>
+                  </div>
+                </div>
+                <div class="health-context">
+                  <span class="tool-kicker">METADATA HEALTH</span>
+                  <h3 id="health-title">A closer look at your model.</h3>
+                  <p id="score-explanation">
+                    Run a check to see a heuristic score and prioritized
+                    findings. This does not measure query speed or data quality.
+                  </p>
+                </div>
+              </div>
+              <div class="section-heading">
+                <div>
+                  <span class="small-label">WHAT NEEDS ATTENTION</span>
+                  <h3>
+                    Findings
+                    <span id="analysis-summary" class="count-pill"
+                      >Awaiting review</span
+                    >
+                  </h3>
+                </div>
+                <label class="filter-label" for="severity-filter"
+                  >Severity<select id="severity-filter">
+                    <option value="all">All findings</option>
+                    <option value="critical">Critical</option>
+                    <option value="warning">Warnings</option>
+                    <option value="info">Information</option>
+                  </select></label
+                >
+              </div>
+              <div id="analysis-empty" class="quiet-empty">
+                <svg class="icon" aria-hidden="true">
+                  <use href="#i-shield" />
+                </svg>
+                <p>Run the health check to see what deserves a closer look.</p>
+              </div>
+              <div id="findings" class="findings" hidden></div>
+              <div class="relationship-card">
+                <div class="section-heading">
+                  <div>
+                    <span class="small-label">CONNECTED THINKING</span>
+                    <h3>Relationship map</h3>
+                  </div>
+                  <span id="map-caption" class="muted-text"
+                    >From your metadata</span
+                  >
+                </div>
+                <div id="relationship-map" class="relationship-map"></div>
+                <div id="relationship-list" class="relationship-list"></div>
+              </div>
+              <p class="tool-note">
+                <svg class="icon" aria-hidden="true"><use href="#i-info" /></svg
+                >The score reflects metadata heuristics. Review model behavior
+                and performance in Power BI.
+              </p>
+            </section>
+            <section
+              id="dashboard"
+              class="panel"
+              role="tabpanel"
+              aria-labelledby="tab-dashboard"
+              tabindex="0"
+              hidden
+            >
+              <div class="tool-intro">
+                <span class="tool-kicker">04 / DASHBOARD STUDIO</span>
+                <h2>A report with<br />a reason to exist.</h2>
+                <p>
+                  Turn a business question into a report blueprint with model
+                  field bindings, a theme, and a build guide.
+                </p>
+              </div>
+              <div class="form dashboard-form">
+                <label class="wide-field" for="dashboard-title"
+                  >Report title<input
+                    id="dashboard-title"
+                    maxlength="140"
+                    placeholder="e.g. Retail performance overview" /></label
+                ><label class="wide-field" for="dashboard-brief"
+                  >What should this report help people decide?<textarea
+                    id="dashboard-brief"
+                    rows="3"
+                    maxlength="2000"
+                    placeholder="Help leaders understand revenue trends and which products deserve attention."
+                  ></textarea></label
+                ><label for="dashboard-audience"
+                  >Audience<select id="dashboard-audience">
+                    <option value="Executive">Executive</option>
+                    <option value="Analyst">Analyst</option>
+                    <option value="Operational">Operational</option>
+                  </select></label
+                ><label for="dashboard-style"
+                  >Visual direction<select id="dashboard-style">
+                    <option value="midnight">Midnight · mint accents</option>
+                    <option value="violet">Violet · creative focus</option>
+                    <option value="light">Light · clean &amp; editorial</option>
+                    <option value="slate">Slate · understated</option>
+                  </select></label
+                >
+              </div>
+              <div class="action-row">
+                <button id="generate-dashboard" class="button primary">
+                  <svg class="icon" aria-hidden="true">
+                    <use href="#i-dashboard" /></svg
+                  ><span>Build report blueprint</span
+                  ><svg class="icon" aria-hidden="true">
+                    <use href="#i-arrow" />
+                  </svg>
+                </button>
+              </div>
+              <div id="dashboard-empty" class="studio-empty">
+                <div class="studio-glyph" aria-hidden="true">
+                  <span></span><span></span><span></span><span></span>
+                </div>
+                <h3>Give your next report a direction.</h3>
+                <p>
+                  A layout schematic, grounded in your model fields.<br />No
+                  data is plotted or invented.
+                </p>
+              </div>
+              <div id="dashboard-result" hidden>
+                <div class="dashboard-result-toolbar">
+                  <label for="dashboard-page"
+                    >Report page<select id="dashboard-page"></select></label
+                  ><span class="schematic-badge"
+                    >LAYOUT SCHEMATIC · NO DATA PLOTTED</span
+                  >
+                </div>
+                <div
+                  id="dashboard-canvas"
+                  class="dashboard-canvas"
+                  aria-label="Report layout schematic"
+                ></div>
+                <div class="export-group dashboard-exports">
+                  <button id="export-blueprint" class="button compact">
+                    <svg class="icon" aria-hidden="true">
+                      <use href="#i-download" /></svg
+                    >Blueprint JSON</button
+                  ><button id="export-theme" class="button compact">
+                    Power BI theme</button
+                  ><button id="export-build-guide" class="button compact">
+                    Build guide
+                  </button>
+                </div>
+                <div id="dashboard-bindings" class="dashboard-bindings"></div>
+                <details class="build-guide">
+                  <summary>How to build this in Power BI</summary>
+                  <ol id="build-steps"></ol>
+                </details>
+                <div id="dashboard-warnings" class="dashboard-warnings"></div>
+              </div>
+              <p class="tool-note">
+                <svg class="icon" aria-hidden="true"><use href="#i-info" /></svg
+                >Blueprints suggest layouts. They do not create PBIX files or
+                execute measures.
+              </p>
+            </section>
+          </div>
+          <aside id="ai-pane" class="ai-pane" aria-labelledby="ai-title">
+            <div class="ai-card-header">
+              <span class="ai-emblem"
+                ><svg class="icon" aria-hidden="true">
+                  <use href="#i-spark" /></svg></span
+              ><span class="ai-label">A LITTLE MORE INTELLIGENCE</span
+              ><span class="beta-pill">AI</span>
+            </div>
+            <h2 id="ai-title">Think it through.<br /> Together.</h2>
+            <p class="ai-description">
+              A model-aware assistant for the questions a template can't answer.
+            </p>
+            <div id="ai-provider-status" class="provider-status" role="status">
+              <span class="status-dot muted"></span
+              ><span id="ai-provider-label">Checking provider settings…</span>
+            </div>
+            <label for="ai-mode"
+              >Help me with<select id="ai-mode">
+                <option value="documentation">Documentation</option>
+                <option value="dax">DAX</option>
+                <option value="analysis">Model review</option>
+                <option value="dashboard">Dashboard design</option>
+                <option value="powerquery">Power Query</option>
+              </select></label
+            ><label id="ai-intent-field" for="ai-intent" hidden
+              >What do you want to do?<select id="ai-intent">
+                <option value="create">Create a measure</option>
+                <option value="explain">Explain DAX</option>
+                <option value="debug">Debug DAX</option>
+                <option value="optimize">Optimize DAX</option>
+              </select></label
+            ><label id="ai-expression-field" for="ai-expression" hidden
+              >Your DAX expression<textarea
+                id="ai-expression"
+                rows="4"
+                maxlength="16000"
+                spellcheck="false"
+                placeholder="Paste a measure or expression…"
+              ></textarea>
+            </label>
+            <div class="prompt-label">
+              <label for="ai-prompt">Your question</label
+              ><span class="small-label">BE SPECIFIC</span>
+            </div>
+            <textarea
+              id="ai-prompt"
+              rows="4"
+              maxlength="8000"
+              placeholder="Explain this model to a new analyst and highlight its key relationships."
+            ></textarea>
+            <div id="ai-suggestions" class="ai-suggestions"></div>
+            <label id="assistant-token-field" for="assistant-token" hidden
+              >Private assistant token<input
+                id="assistant-token"
+                type="password"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="Session only · never saved" /></label
+            ><button id="ask-ai" class="button violet" disabled>
+              <svg class="icon" aria-hidden="true"><use href="#i-spark" /></svg
+              ><span>Ask PowerBI Doctor</span
+              ><svg class="icon" aria-hidden="true">
+                <use href="#i-arrow" />
+              </svg>
+            </button>
+            <p class="ai-privacy">
+              <svg class="icon" aria-hidden="true"><use href="#i-shield" /></svg
+              >Model metadata is sent to your configured AI provider when you
+              run AI assistance.
+            </p>
+            <div id="ai-setup" class="ai-setup" hidden>
+              <strong>Connect your AI provider</strong>
+              <p>
+                In Render → your service → Environment, set
+                <code>AI_PROVIDER</code> and the matching API key or Ollama
+                connection. Redeploy to enable assistance.
+              </p>
+              <details>
+                <summary>Provider settings</summary>
+                <p>
+                  <code>gemini</code>: <code>GEMINI_API_KEY</code>, optional
+                  <code>GEMINI_MODEL</code>.<br /><code>openai</code>:
+                  <code>OPENAI_API_KEY</code>, optional
+                  <code>OPENAI_MODEL</code>.<br /><code>ollama</code>:
+                  <code>OLLAMA_BASE_URL</code> and <code>OLLAMA_MODEL</code>.
+                </p>
+                <p>
+                  Add keys securely in environment settings. Built-in tools work
+                  without AI.
+                </p>
+              </details>
+            </div>
+            <div id="ai-error" class="ai-error" role="alert" hidden></div>
+            <div class="ai-history-header" id="ai-history-header" hidden>
+              <span class="small-label">THIS CONVERSATION</span
+              ><button id="clear-ai" class="text-button">Clear</button>
+            </div>
+            <div id="ai-history" class="ai-history" aria-live="polite"></div>
+          </aside>
+        </div>
+        <div class="session-status">
+          <span id="action-status" role="status" aria-live="polite"
+            >Ready when you are.</span
+          ><span><span class="status-dot"></span>METADATA → MOMENTUM</span>
+        </div>
+        <footer>
+          <span
+            >PowerBI Doctor <span class="footer-dot">✳</span> A little clarity
+            goes a long way.</span
+          ><span>BUILT FOR THE PEOPLE BEHIND THE REPORT.</span>
+        </footer>
+      </main>
+    </div>
+    <dialog id="import-dialog" aria-labelledby="source-title">
+      <div class="dialog-header">
+        <div>
+          <span class="tool-kicker">YOUR STARTING POINT</span>
+          <h2 id="source-title">Bring your model into focus.</h2>
+        </div>
+        <button
+          id="close-import"
+          class="button icon-button"
+          aria-label="Close model source"
+        >
+          <svg class="icon" aria-hidden="true"><use href="#i-close" /></svg>
+        </button>
+      </div>
+      <div class="source-grid">
+        <div class="source-import">
+          <div id="dropzone" class="import-zone">
+            <span class="upload-glyph"
+              ><svg class="icon" aria-hidden="true">
+                <use href="#i-upload" /></svg
+            ></span>
+            <h3>A model, from your files.</h3>
+            <p>
+              Drop files here, or choose files.<br />Each workbook sheet becomes
+              a table.
+            </p>
+            <label for="import-mode"
+              >Import mode<select id="import-mode">
+                <option value="replace">Replace model</option>
+                <option value="append">Add tables to current model</option>
+              </select></label
+            ><button id="import" class="button primary" disabled>
+              <span id="import-label">Import files</span
+              ><svg class="icon" aria-hidden="true">
+                <use href="#i-arrow" />
+              </svg></button
+            ><input
+              id="file"
+              class="visually-hidden"
+              tabindex="-1"
+              type="file"
+              multiple
+              accept=".csv,.tsv,.txt,.xlsx,.json,.jsonl,.ndjson,.xml,.bim"
+              aria-label="Import model or data files"
+            /><span class="import-limit"
+              >CSV / TSV / TXT / XLSX / JSON / XML / BIM</span
+            ><span class="import-limit"
+              >JSONL / NDJSON ·
+              <span id="upload-limit-label">LOADING UPLOAD LIMITS…</span></span
+            >
+            <p class="import-mode-hint" id="import-mode-hint">
+              Replaces current metadata. Files in this batch are combined.
+            </p>
+          </div>
+          <div class="import-results">
+            <p
+              id="import-feedback"
+              class="import-feedback"
+              role="status"
+              hidden
+            ></p>
+            <details id="import-details" hidden>
+              <summary id="import-details-title">Import details</summary>
+              <ul id="import-details-list"></ul>
+            </details>
+          </div>
+          <p class="privacy-note">
+            <svg class="icon" aria-hidden="true"><use href="#i-shield" /></svg
+            >Data rows are processed in memory and are not saved. Exports
+            contain model metadata.
+          </p>
+        </div>
+        <div class="source-editor">
+          <div class="editor-label">
+            <label for="model">Or edit model metadata</label
+            ><button id="export-model" class="button compact" disabled>
+              <svg class="icon" aria-hidden="true">
+                <use href="#i-download" /></svg
+              >Export JSON
+            </button>
+          </div>
+          <div class="editor-shell">
+            <div class="editor-toolbar">
+              <span><span class="file-dot"></span>model.json</span
+              ><span>{ }</span>
+            </div>
+            <textarea
+              id="model"
+              spellcheck="false"
+              autocapitalize="off"
+              autocomplete="off"
+              aria-describedby="source-status"
+              aria-label="Model metadata JSON"
+            ></textarea>
+            <div class="editor-footer">
+              <span>JSON · UTF-8</span><span id="char-count">0 chars</span>
+            </div>
+          </div>
+          <div id="source-status" class="source-status" role="status"></div>
+          <p class="editor-hint">
+            Data imports infer column types. Add measures and relationships
+            here.
+          </p>
+        </div>
+      </div>
+      <div class="dialog-footer">
+        <span class="small-label">MODEL METADATA. NO DATA ROWS.</span
+        ><button id="finish-import" class="button secondary">
+          Back to workspace<svg class="icon" aria-hidden="true">
+            <use href="#i-arrow" />
+          </svg>
+        </button>
+      </div>
+    </dialog>
+    <script type="module" src="/app.js"></script>
+  </body>
 </html>

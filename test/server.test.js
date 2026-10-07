@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 test('hosted server serves health, UI, and model tools on an assigned port', { timeout: 10000 }, async t => {
   const child = spawn(process.execPath, [fileURLToPath(new URL('../server.js', import.meta.url))], {
-    env: { ...process.env, HOST: '0.0.0.0', PORT: '0', MAX_UPLOAD_MB: '3' },
+    env: { ...process.env, HOST: '0.0.0.0', PORT: '0', MAX_UPLOAD_MB: '3', AI_PROVIDER: 'gemini', GEMINI_API_KEY: '', OPENAI_API_KEY: '', AI_ACCESS_TOKEN: '' },
     stdio: ['ignore', 'pipe', 'pipe']
   });
   t.after(async () => {
@@ -34,12 +34,23 @@ test('hosted server serves health, UI, and model tools on an assigned port', { t
   assert.deepEqual(await limitsResponse.json(), { maxUploadBytes: 3_000_000, maxModelBytes: 2_000_000, maxFiles: 10 });
   const home = await fetch(base);
   assert.equal(home.status, 200);
-  assert.match(await home.text(), /Understand your model/);
+  assert.match(await home.text(), /PowerBI Doctor/);
+  const config = await fetch(`${base}/api/config`);
+  const settings = await config.json();
+  assert.equal(settings.ai.configured, false);
+  assert.equal(settings.app.name, 'PowerBI Doctor');
+  assert.equal(settings.features.dashboard, true);
+  assert.equal(settings.features.executeDax, false);
+  assert.equal(config.headers.get('cache-control'), 'no-store');
   const model = { tables: [{ name: 'Sales', columns: [{ name: 'Amount' }] }] };
   const cases = [
     ['docs', model, result => assert.match(result, /### Sales/)],
     ['analyze', model, result => assert.equal(result[0].title, 'Sales: missing description')],
-    ['dax', { template: 'sum', table: 'Sales', column: 'Amount' }, result => assert.equal(result.expression, "Total = SUM('Sales'[Amount])")]
+    ['dax', { template: 'sum', table: 'Sales', column: 'Amount' }, result => assert.equal(result.expression, "Total = SUM('Sales'[Amount])")],
+    ['docs-html', model, result => assert.match(result, /<table>/)],
+    ['analysis-overview', model, result => { assert.equal(result.stats.tables, 1); assert.ok(result.score <= 100); assert.ok(result.findings.some(finding => /unspecified/.test(finding.title))); }],
+    ['dashboard', { model, brief: 'Executive overview' }, result => { assert.equal(result.source, 'rules'); assert.ok(result.pages.length); assert.ok(result.theme.dataColors.length); }],
+    ['dax-review', { expression: 'SUM(Sales[Amount]) / [Target]' }, result => assert.ok(result.findings.some(finding => /Division/.test(finding.title)))]
   ];
   for (const [path, input, check] of cases) {
     const response = await fetch(`${base}/api/${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input) });
@@ -70,4 +81,12 @@ test('hosted server serves health, UI, and model tools on an assigned port', { t
   assert.match((await oversizedMetadata.json()).error, /Model metadata exceeds 2 MB/);
   const module = await fetch(`${base}/import-model.js`);
   assert.equal(module.status, 200);
+  const font = await fetch(`${base}/fonts/space-grotesk-700.woff2`);
+  assert.equal(font.status, 200);
+  assert.equal(font.headers.get('content-type'), 'font/woff2');
+  const assistant = await fetch(`${base}/api/assistant`, { method: 'POST', body: JSON.stringify({ mode: 'dax', prompt: 'Explain filter context', model }) });
+  assert.equal(assistant.status, 503);
+  assert.match((await assistant.json()).error, /GEMINI_API_KEY/);
+  const missingAsset = await fetch(`${base}/fonts/missing.woff2`);
+  assert.equal(missingAsset.status, 404);
 });
