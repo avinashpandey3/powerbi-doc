@@ -1,18 +1,25 @@
 import { combineModels } from './import-model.js';
+import { createDoctor } from './doctor.js';
 const $ = id => document.getElementById(id);
 const example = {
   name: 'Retail Analytics',
+  description: 'Example semantic model for retail sales, customers, products, and the calendar. Values are not included.',
   tables: [
-    { name: 'Sales', description: 'One row per sales transaction.', columns: [{ name: 'Amount', dataType: 'decimal', description: 'Transaction revenue.' }, { name: 'Date', dataType: 'dateTime' }, { name: 'CustomerId', dataType: 'int64' }], measures: [{ name: 'Revenue', expression: "SUM('Sales'[Amount])" }] },
-    { name: 'Calendar', columns: [{ name: 'Date', dataType: 'dateTime' }] },
-    { name: 'Customers', columns: [{ name: 'CustomerId', dataType: 'int64' }] }
+    { name: 'Sales', description: 'One row per sales transaction.', columns: [{ name: 'Amount', dataType: 'decimal', description: 'Transaction revenue.' }, { name: 'Quantity', dataType: 'int64', description: 'Units sold.' }, { name: 'Date', dataType: 'dateTime', description: 'Transaction date.' }, { name: 'CustomerId', dataType: 'int64', description: 'Customer reference.' }, { name: 'ProductId', dataType: 'int64', description: 'Product reference.' }], measures: [{ name: 'Revenue', expression: "SUM('Sales'[Amount])", description: 'Total revenue in the current filter context.', formatString: '#,##0.00' }, { name: 'Transactions', expression: "COUNTROWS('Sales')", description: 'Number of transactions in the current filter context.' }] },
+    { name: 'Calendar', description: 'One row per calendar date.', columns: [{ name: 'Date', dataType: 'dateTime', description: 'Calendar date.' }, { name: 'Year', dataType: 'int64', description: 'Calendar year.' }, { name: 'Month', dataType: 'string', description: 'Month label.' }] },
+    { name: 'Customers', description: 'One row per customer.', columns: [{ name: 'CustomerId', dataType: 'int64', isKey: true, description: 'Unique customer identifier.' }, { name: 'Region', dataType: 'string', description: 'Customer region.' }, { name: 'Segment', dataType: 'string', description: 'Customer segment.' }] },
+    { name: 'Products', description: 'One row per product.', columns: [{ name: 'ProductId', dataType: 'int64', isKey: true, description: 'Unique product identifier.' }, { name: 'ProductName', dataType: 'string', description: 'Product label.' }, { name: 'Category', dataType: 'string', description: 'Product category.' }] }
   ],
-  relationships: [{ fromTable: 'Sales', fromColumn: 'Date', toTable: 'Calendar', toColumn: 'Date', cardinality: 'manyToOne', crossFilteringBehavior: 'oneDirection' }]
+  relationships: [
+    { fromTable: 'Sales', fromColumn: 'Date', toTable: 'Calendar', toColumn: 'Date', cardinality: 'manyToOne', crossFilteringBehavior: 'oneDirection' },
+    { fromTable: 'Sales', fromColumn: 'CustomerId', toTable: 'Customers', toColumn: 'CustomerId', cardinality: 'manyToOne', crossFilteringBehavior: 'oneDirection' },
+    { fromTable: 'Sales', fromColumn: 'ProductId', toTable: 'Products', toColumn: 'ProductId', cardinality: 'manyToOne', crossFilteringBehavior: 'oneDirection' }
+  ]
 };
 const busy = new Set();
 let markdown = '', dax = '', modelRevision = 0, daxRevision = 0, importRevision = 0, validSource = false;
 let sourceCaption = 'Sample metadata · editable';
-let importController;
+let importController, doctor;
 let limits = { maxUploadBytes: 10_000_000, maxModelBytes: 2_000_000, maxFiles: 10 };
 let limitsLoaded = false;
 
@@ -21,13 +28,19 @@ function model() {
   let data;
   try { data = JSON.parse($('model').value); } catch { throw new Error('Invalid JSON. Check commas, quotes, and brackets.'); }
   if (!data || !Array.isArray(data.tables) || !data.tables.length) throw new Error('Add a nonempty tables array. See the format guide.');
+  if (data.tables.length > 128) throw new Error('A model can contain at most 128 tables.');
   const names = new Set();
   for (const table of data.tables) {
     if (!table || typeof table.name !== 'string' || !table.name.trim() || names.has(table.name)) throw new Error('Tables need unique, nonempty names.');
     names.add(table.name);
+    for (const field of ['rowCount', 'sampledRowCount', 'headerRow']) if (table[field] !== undefined && (!Number.isSafeInteger(table[field]) || table[field] < (field === 'headerRow' ? 1 : 0))) throw new Error(`${table.name}.${field} must be a valid row count or index.`);
+    if (table.sampledRowCount !== undefined && (table.rowCount === undefined || table.sampledRowCount > table.rowCount)) throw new Error('sampledRowCount must not exceed rowCount.');
     for (const key of ['columns', 'measures']) {
       if (table[key] !== undefined && !Array.isArray(table[key])) throw new Error(`${table.name}.${key} must be an array.`);
-      for (const item of table[key] || []) if (!item || typeof item.name !== 'string' || !item.name.trim()) throw new Error(`${key} need nonempty names.`);
+      for (const item of table[key] || []) {
+        if (!item || typeof item.name !== 'string' || !item.name.trim()) throw new Error(`${key} need nonempty names.`);
+        for (const field of ['description', 'expression', 'dataType']) if (item[field] !== undefined && typeof item[field] !== 'string') throw new Error(`${item.name}.${field} must be text.`);
+      }
     }
   }
   if (data.relationships !== undefined && !Array.isArray(data.relationships)) throw new Error('relationships must be an array.');
@@ -53,13 +66,13 @@ function columns(tableId, columnId) {
   options(columnId, values.map(c => c.name), preferred);
 }
 function updateButtons() {
-  for (const id of ['generate-docs', 'analyze']) $(id).disabled = !validSource || busy.has(id);
+  for (const id of ['generate-docs', 'analyze', 'generate-dashboard']) $(id).disabled = !validSource || busy.has(id);
   const template = $('template').value;
-  $('generate-dax').disabled = !validSource || busy.has('generate-dax') || !$('table').value || (template !== 'count' && !$('column').value) || (template === 'ytd' && (!$('date-table').value || !$('date-column').value));
+  $('generate-dax').disabled = !validSource || busy.has('generate-dax') || !$('table').value || (template !== 'count' && !$('column').value) || (['ytd', 'previous-month', 'yoy', 'rolling30'].includes(template) && (!$('date-table').value || !$('date-column').value));
   $('export-model').disabled = !validSource;
 }
 function templateFields() {
-  const count = $('template').value === 'count', ytd = $('template').value === 'ytd';
+  const count = $('template').value === 'count', ytd = ['ytd', 'previous-month', 'yoy', 'rolling30'].includes($('template').value);
   $('column-field').hidden = count; $('column').disabled = count || !validSource;
   for (const id of ['date-table', 'date-column']) { $(`${id}-field`).hidden = !ytd; $(id).disabled = !ytd || !validSource; }
   updateButtons();
@@ -73,7 +86,7 @@ function sync() {
     $('model-caption').textContent = sourceCaption;
     $('table-count').textContent = data.tables.length;
     const columnCount = data.tables.reduce((n, t) => n + (t.columns || []).length, 0);
-    $('column-count').textContent = `${columnCount} ${columnCount === 1 ? 'column' : 'columns'}`;
+    $('column-count').textContent = columnCount;
     $('measure-count').textContent = data.tables.reduce((n, t) => n + (t.measures || []).length, 0);
     $('relationship-count').textContent = (data.relationships || []).length;
     options('table', data.tables.map(t => t.name));
@@ -85,7 +98,7 @@ function sync() {
     validSource = false; message = error.message;
     $('model-name').textContent = 'Model needs attention'; $('model-caption').textContent = 'Fix the source JSON to continue';
     for (const id of ['table-count', 'measure-count', 'relationship-count']) $(id).textContent = '—';
-    $('column-count').textContent = '— columns';
+    $('column-count').textContent = '—';
     for (const id of ['table', 'column', 'date-table', 'date-column']) options(id, []);
   }
   $('source-status').textContent = message;
@@ -93,15 +106,15 @@ function sync() {
   document.querySelector('.editor-shell').classList.toggle('invalid', !validSource);
   $('model').setAttribute('aria-invalid', String(!validSource));
   $('table').disabled = !validSource;
-  templateFields();
+  templateFields(); doctor?.sync();
 }
 function resetDax() {
-  daxRevision++; dax = '';
+  daxRevision++; dax = ''; doctor?.setDax('');
   $('dax-output').textContent = ''; $('dax-output').hidden = true; $('dax-empty').hidden = false;
   $('copy-dax').disabled = true; $('explanation').textContent = ''; $('explanation-card').hidden = true;
 }
 function reset() {
-  modelRevision++; importRevision++; markdown = '';
+  modelRevision++; importRevision++; markdown = ''; doctor?.reset();
   importController?.abort(); importController = undefined; setImportBusy(false);
   $('import-feedback').hidden = true; $('import-details').hidden = true; $('import-details-list').replaceChildren();
   $('download').disabled = true; $('copy-docs').disabled = true;
@@ -119,8 +132,8 @@ async function run(path, input) {
 function action(id, label, fn) {
   const button = $(id), labelNode = button.querySelector('span'), original = labelNode.textContent;
   button.onclick = async () => {
-    const revision = modelRevision, dRevision = daxRevision;
-    const current = () => revision === modelRevision && (id !== 'generate-dax' || dRevision === daxRevision);
+    const revision = modelRevision, dRevision = daxRevision, dashboardRevision = doctor?.getDashboardRevision();
+    const current = () => revision === modelRevision && (id !== 'generate-dax' || dRevision === daxRevision) && (id !== 'generate-dashboard' || dashboardRevision === doctor?.getDashboardRevision());
     busy.add(id); button.setAttribute('aria-busy', 'true'); labelNode.textContent = label; updateButtons();
     showError(''); status(label);
     try { await fn(current); }
@@ -131,15 +144,15 @@ function action(id, label, fn) {
 function activateTab(button, focus = false) {
   document.querySelectorAll('.panel').forEach(panel => panel.hidden = panel.id !== button.dataset.panel);
   document.querySelectorAll('.tab').forEach(tab => { const active = tab === button; tab.classList.toggle('active', active); tab.setAttribute('aria-selected', String(active)); tab.tabIndex = active ? 0 : -1; });
-  showError(''); if (focus) button.focus();
+  showError(''); doctor?.activate(button.dataset.panel); if (focus) button.focus();
 }
 const tabs = [...document.querySelectorAll('.tab')];
 for (const [index, button] of tabs.entries()) {
   button.onclick = () => activateTab(button);
   button.onkeydown = event => {
     let next;
-    if (event.key === 'ArrowRight') next = (index + 1) % tabs.length;
-    if (event.key === 'ArrowLeft') next = (index + tabs.length - 1) % tabs.length;
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') next = (index + 1) % tabs.length;
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') next = (index + tabs.length - 1) % tabs.length;
     if (event.key === 'Home') next = 0;
     if (event.key === 'End') next = tabs.length - 1;
     if (next !== undefined) { event.preventDefault(); activateTab(tabs[next], true); }
@@ -244,33 +257,35 @@ for (const id of ['column', 'date-column']) $(id).onchange = () => { resetDax();
 action('generate-docs', 'Generating…', async current => {
   const result = await run('/api/docs', model()); if (!current()) return;
   markdown = result; $('docs-output').textContent = result; $('docs-output').hidden = false; $('docs-empty').hidden = true;
-  $('download').disabled = false; $('copy-docs').disabled = false; status('Documentation generated. Ready to copy or export.');
+  $('download').disabled = false; $('copy-docs').disabled = false; doctor.documented(); status('Documentation generated. Ready to copy or export.');
 });
 action('generate-dax', 'Generating…', async current => {
-  const result = await run('/api/dax', { template: $('template').value, table: $('table').value, column: $('column').value, dateTable: $('date-table').value, dateColumn: $('date-column').value });
+  const result = await run('/api/dax', { template: $('template').value, table: $('table').value, column: $('column').value, dateTable: $('date-table').value, dateColumn: $('date-column').value, model: model() });
   if (!current()) return;
-  dax = result.expression; $('dax-output').textContent = dax; $('dax-output').hidden = false; $('dax-empty').hidden = true;
+  dax = result.expression; $('dax-output').textContent = dax; doctor.setDax(dax); $('dax-output').hidden = false; $('dax-empty').hidden = true;
   $('explanation').textContent = result.explanation; $('explanation-card').hidden = false; $('copy-dax').disabled = false; status('Measure generated. Review the explanation before use.');
 });
-action('analyze', 'Analyzing…', async current => {
-  const findings = await run('/api/analyze', model()); if (!current()) return;
-  $('findings').replaceChildren(); $('findings').hidden = false; $('analysis-empty').hidden = true;
-  const warnings = findings.filter(f => f.severity === 'warning').length;
-  $('analysis-summary').textContent = `${warnings} warnings · ${findings.length - warnings} info`;
-  for (const f of findings) {
-    const item = document.createElement('div'); item.className = `finding ${f.severity}`;
-    const severity = document.createElement('span'); severity.className = 'severity'; severity.textContent = f.severity.toUpperCase();
-    const content = document.createElement('div'), title = document.createElement('h3'), detail = document.createElement('p');
-    title.textContent = f.title; detail.textContent = f.detail; content.append(title, detail); item.append(severity, content); $('findings').append(item);
-  }
-  if (!findings.length) {
-    const item = document.createElement('div'); item.className = 'clear-review';
-    const title = document.createElement('h3'), detail = document.createElement('p'); title.textContent = 'No findings from these checks.';
-    detail.textContent = 'Validate model behavior in Power BI. Metadata checks do not cover all modeling or performance issues.';
-    item.append(title, detail); $('findings').append(item);
-  }
-  status(`Review complete. ${findings.length} ${findings.length === 1 ? 'finding' : 'findings'} to consider.`);
+action('analyze', 'Reviewing…', async current => {
+  const result = await run('/api/analysis-overview', model()); if (!current()) return;
+  doctor.setAnalysis(result);
+  status(`Review complete. ${result.counts.total} findings to consider.`);
 });
+action('generate-dashboard', 'Building…', async current => {
+  const result = await run('/api/dashboard', { model: model(), brief: $('dashboard-brief').value, title: $('dashboard-title').value, audience: $('dashboard-audience').value, style: $('dashboard-style').value });
+  if (!current()) return;
+  doctor.setDashboard(result); status('Report blueprint ready. Review its field bindings and build guide.');
+});
+$('download-html').onclick = async () => {
+  const revision = modelRevision; $('download-html').disabled = true;
+  try { const html = await run('/api/docs-html', model()); if (revision !== modelRevision) return; download(html, 'documentation.html', 'text/html'); status('Standalone HTML documentation downloaded.'); }
+  catch (error) { if (revision === modelRevision) showError(error.message); }
+  finally { if (revision === modelRevision) $('download-html').disabled = false; }
+};
+const dialog = $('import-dialog');
+for (const id of ['open-import', 'manage-source']) $(id).onclick = () => dialog.showModal();
+for (const id of ['close-import', 'finish-import']) $(id).onclick = () => dialog.close();
+dialog.addEventListener('click', event => { if (event.target === dialog) { const rect = dialog.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) dialog.close(); } });
+
 async function copy(value, label) {
   try { await navigator.clipboard.writeText(value); showError(''); status(`${label} copied to clipboard.`); }
   catch { showError('Clipboard access is unavailable. Select and copy the output manually.'); }
@@ -286,5 +301,6 @@ $('download').onclick = () => {
   status('Markdown export downloaded.');
 };
 $('export-model').onclick = () => { download(JSON.stringify(model(), null, 2), 'model.json', 'application/json'); status('Model JSON exported. Data rows are not included.'); };
+doctor = createDoctor({ getModel: model, status, showError, run, download });
 $('sample').click();
 const limitsReady = loadLimits();

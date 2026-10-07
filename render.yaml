@@ -11,3 +11,7 @@ services:
         value: 0.0.0.0
       - key: NODE_VERSION
         value: "24"
+      - key: AI_PROVIDER
+        value: gemini
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
